@@ -50,13 +50,23 @@ function ind(reg: register, displacement : imm) : ind {
 
 type operand = register | imm | ind
 
+
 enum OP {
-    ADD = 'ADD',
+    /* BINOP */
+    ADD = "ADD",
+    GT = "GT",
+    GE = "GE",
+    LT = "LT",
+    LE = "LE",
+    EQ = "EQ",
+    NE = "NE",
+
+    /* CONTROL FLOW */
     MOV = 'MOV',
-    ICMP = 'ICMP',
-    JP = 'JP',
+    BR = 'BR',
     PUSH = 'PUSH',
-    POP = 'POP'
+    POP = 'POP',
+    DONE = 'DONE'
 }
 
 type instruction = {
@@ -108,16 +118,22 @@ const MEMORY_SIZE = SEGMENT_SIZE * 3
 const MEMORY_BOTTOM = MEMORY_SIZE
 const STACK_TOP = MEMORY_BOTTOM - SEGMENT_SIZE
 
+/* FLAGS */
+const ZF = 0;
+const OF = 1;
+const SF = 2;
 
 type machine = {
     registers : number[]
     memory: number[]
+    flags: number[]
     builtins: object
 }
 
 let machine : machine = {
     registers : new Array(REGISTER_COUNT).fill(0),
     memory: new Array(MEMORY_SIZE).fill(0),
+    flags: new Array(3).fill(0),
     builtins : {}
 }
 
@@ -147,6 +163,56 @@ function initialize_machine() {
 }
 
 let microcode : {[key in OP] : (instr : instruction)=>void} = {
+    ADD: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        set_operand_value(dst_op, get_operand_value(op1) + get_operand_value(op2))
+    },
+    GT: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        const value = get_operand_value(op1) > get_operand_value(op2) ? 1 : 0
+        set_operand_value(dst_op, value)
+    },
+    GE: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        const value = get_operand_value(op1) >= get_operand_value(op2) ? 1 : 0
+        set_operand_value(dst_op, value)
+    },
+    LE: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        const value = get_operand_value(op1) <= get_operand_value(op2) ? 1 : 0
+        set_operand_value(dst_op, value)
+    },
+    LT: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        const value = get_operand_value(op1) < get_operand_value(op2) ? 1 : 0
+        set_operand_value(dst_op, value)
+    },
+    NE: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        const value = get_operand_value(op1) != get_operand_value(op2) ? 1 : 0
+        set_operand_value(dst_op, value)
+    },
+
+    EQ: instr => {
+        const dst_op = instr.operands[0]
+        const op1 = instr.operands[1]
+        const op2 = instr.operands[2]
+        const value = get_operand_value(op1) == get_operand_value(op2) ? 1 : 0
+        set_operand_value(dst_op, value)
+    },
+
     PUSH: instr => {
         if (get_reg(SP) <= STACK_TOP) {
             throw Error("Reached stack top")
@@ -167,29 +233,48 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
         const src_op = instr.operands[1]
         set_operand_value(dst_op, get_operand_value(src_op))
     },
-    ADD: instr => {},
-    ICMP: instr => {},
-    JP: instr => {},
+    BR: instr => {
+        if (instr.operands.length > 1) {
+            // conditional branching
+            const is_true =  get_operand_value(instr.operands[0]) === 1
+            if (is_true) {
+                set_operand_value(PC, get_operand_value(instr.operands[1]))
+            } else {
+                set_operand_value(PC, get_operand_value(instr.operands[2]))
+            }
+        } else if (instr.operands.length === 1) {
+            // unconditional branch
+            set_operand_value(PC, get_operand_value(instr.operands[0]))
+        }
+    },
+    DONE: instr => {},
 }
-
 
 initialize_machine();
 
 let instrs = [
-    {operation: OP.MOV, operands: [R0, imm(42)]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.PUSH, operands: [R0]},
-    {operation: OP.POP, operands: [R1]},
-    {operation: OP.MOV, operands: [R2, R1]}
+    {operation: OP.MOV, operands: [R0, imm(0)]},
+    {operation: OP.MOV, operands: [R1, imm(0)]},
+    {operation: OP.LT, operands: [R2, R1, imm(100)]},
+    {operation: OP.BR, operands: [R2, imm(4), imm(7)]},
+    {operation: OP.ADD, operands: [R1, R1, imm(1)]},
+    {operation: OP.ADD, operands: [R0, R1, R0]},
+    {operation: OP.BR, operands: [imm(2)]},
+    {operation: OP.DONE, operands: []},
 ]
 
-instrs.forEach(x => microcode[x.operation](x))
+const run = () => {
+    let op = instrs[get_reg(PC)]
+    while(op.operation !== OP.DONE) {
+        // console.log(instruction_to_string(op))
+        microcode[op.operation](op)
+        op = instrs[machine.registers[REGISTER.PC]++];
+    }
+}
+
+
+instrs.forEach((x, i) => {
+    console.log(`${i} : ${instruction_to_string(x)}`)
+})
+run()
 console.log(machine)
