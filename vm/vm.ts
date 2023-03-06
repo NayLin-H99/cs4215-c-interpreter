@@ -1,3 +1,5 @@
+import { memoryUsage } from "process"
+import { arrayBuffer } from "stream/consumers"
 
 enum REGISTER { 
     R0,
@@ -115,26 +117,36 @@ const SEGMENT_SIZE = 10
 // .text .heap .stack same size (might want to custom it later)
 // for now .text lives outside of memory
 const MEMORY_SIZE = SEGMENT_SIZE * 3
-const MEMORY_BOTTOM = MEMORY_SIZE
+const MEMORY_BOTTOM = MEMORY_SIZE - 1
 const STACK_TOP = MEMORY_BOTTOM - SEGMENT_SIZE
 
 type machine = {
     registers : BigInt64Array
-    memory: BigInt64Array
+    memory: ArrayBuffer
     builtins: object
 }
 
 let machine : machine = {
     registers : new BigInt64Array(REGISTER_COUNT).fill(0n),
-    memory: new BigInt64Array(MEMORY_SIZE).fill(0n),
+    memory: new ArrayBuffer(MEMORY_SIZE * WORD_SIZE),
     builtins : {}
+}
+
+function read_word(address: bigint) {
+    const view = new DataView(machine.memory)
+    return view.getBigInt64(Number(address))
+}
+
+function write_word(address: bigint, value: bigint) {
+    const view = new DataView(machine.memory)
+    view.setBigInt64(Number(address), value)
 }
 
 function get_operand_value(operand : operand) : bigint {
     switch (operand.tag) {
         case "imm": return operand.immediate
         case "reg": return machine.registers[operand.reg]
-        case "ind": return machine.memory[Number(get_operand_value(operand.reg) + get_operand_value(operand.displacement))]
+        case "ind": return read_word(get_operand_value(operand.reg) + get_operand_value(operand.displacement))
     }
 }
 
@@ -142,13 +154,13 @@ function set_operand_value(operand : operand, value : bigint) : void {
     switch(operand.tag) {
         case "imm": throw Error("Immediates has no memory storage")
         case "reg": machine.registers[operand.reg] = value; break;
-        case "ind": machine.memory[Number(get_operand_value(operand.reg) + get_operand_value(operand.displacement))] = value; break;
+        case "ind": write_word(get_operand_value(operand.reg) + get_operand_value(operand.displacement), value); break;
     }
 }
 
 function initialize_machine() { 
-    set_operand_value(SP, BigInt(MEMORY_BOTTOM))
-    set_operand_value(BP, BigInt(MEMORY_BOTTOM))
+    set_operand_value(SP, BigInt(MEMORY_BOTTOM * 8))
+    set_operand_value(BP, BigInt(MEMORY_BOTTOM * 8))
 }
 
 type binop_fn_ty = (a:bigint, b:bigint) => bigint
@@ -193,16 +205,16 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     },
 
     PUSH: instr => {
-        if (get_operand_value(SP) <= STACK_TOP) {
+        if (get_operand_value(SP) <= STACK_TOP * 8) {
             throw Error("Reached stack top")
         }
         const value = get_operand_value(instr.operands[0])
         set_operand_value(ind(SP, imm(0n)), value)
-        machine.registers[REGISTER.SP]--
+        machine.registers[REGISTER.SP] -= 8n
     },
     POP: instr => {
-        machine.registers[REGISTER.SP]++
-        if (get_operand_value(SP) > MEMORY_BOTTOM) {
+        machine.registers[REGISTER.SP] += 8n
+        if (get_operand_value(SP) > MEMORY_BOTTOM * 8) {
             throw Error("Reached stack bottom")
         }
         const v = get_operand_value(ind(SP, imm(0n)))
@@ -240,6 +252,10 @@ let instrs = [
     {operation: OP.ADD, operands: [R1, R1, imm(1n)]},
     {operation: OP.ADD, operands: [R0, R1, R0]},
     {operation: OP.BR, operands: [imm(2n)]},
+    {operation: OP.PUSH, operands: [imm(11n)]},
+    {operation: OP.PUSH, operands: [imm(12n)]},
+    {operation: OP.PUSH, operands: [imm(13n)]},
+    {operation: OP.POP, operands: [R3]},
     {operation: OP.DONE, operands: []},
 ]
 
@@ -253,12 +269,19 @@ const run = () => {
 }
 
 
+function print_machine() {
+    console.log(machine.registers)
+    const view = new DataView(machine.memory)
+    for (let i=0; i<MEMORY_SIZE;i++){
+        console.log(i*8 + ":" + view.getBigInt64(i * 8))
+    }
+}
+
 instrs.forEach((x, i) => {
     console.log(`${i} : ${instruction_to_string(x)}`)
 })
 run()
-console.log(machine)
 
-const view = new DataView(machine.registers)
-console.log(view.getBigInt64(0))
+print_machine()
+
 
