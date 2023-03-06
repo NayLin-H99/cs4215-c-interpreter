@@ -24,10 +24,10 @@ function register(reg : REGISTER) : register {
 
 type imm = {
     tag: "imm"
-    immediate: number
+    immediate: bigint
 }
 
-function imm(n : number) : imm {
+function imm(n : bigint) : imm {
     return {
         tag: "imm",
         immediate: n
@@ -76,7 +76,7 @@ type instruction = {
 
 const op_to_string = (op : OP) => op.toLowerCase()
 
-const imm_to_string = (imm : imm) => JSON.stringify(imm.immediate)
+const imm_to_string = (imm : imm) => imm.immediate.toString()
 const register_to_string = (r : register) => 
     r.reg === REGISTER.R0 ? "R0" : 
     r.reg === REGISTER.R1 ? "R1" : 
@@ -118,114 +118,94 @@ const MEMORY_SIZE = SEGMENT_SIZE * 3
 const MEMORY_BOTTOM = MEMORY_SIZE
 const STACK_TOP = MEMORY_BOTTOM - SEGMENT_SIZE
 
-/* FLAGS */
-const ZF = 0;
-const OF = 1;
-const SF = 2;
-
 type machine = {
-    registers : number[]
-    memory: number[]
-    flags: number[]
+    registers : BigInt64Array
+    memory: BigInt64Array
     builtins: object
 }
 
 let machine : machine = {
-    registers : new Array(REGISTER_COUNT).fill(0),
-    memory: new Array(MEMORY_SIZE).fill(0),
-    flags: new Array(3).fill(0),
+    registers : new BigInt64Array(REGISTER_COUNT).fill(0n),
+    memory: new BigInt64Array(MEMORY_SIZE).fill(0n),
     builtins : {}
 }
 
-function get_operand_value(operand : operand) : number {
+function get_operand_value(operand : operand) : bigint {
     switch (operand.tag) {
         case "imm": return operand.immediate
         case "reg": return machine.registers[operand.reg]
-        case "ind": return machine.memory[get_operand_value(operand.reg) + get_operand_value(operand.displacement)]
+        case "ind": return machine.memory[Number(get_operand_value(operand.reg) + get_operand_value(operand.displacement))]
     }
 }
 
-function set_operand_value(operand : operand, value : number) : void {
+function set_operand_value(operand : operand, value : bigint) : void {
     switch(operand.tag) {
         case "imm": throw Error("Immediates has no memory storage")
         case "reg": machine.registers[operand.reg] = value; break;
-        case "ind": machine.memory[get_operand_value(operand.reg) + get_operand_value(operand.displacement)] = value; break;
+        case "ind": machine.memory[Number(get_operand_value(operand.reg) + get_operand_value(operand.displacement))] = value; break;
     }
 }
 
-function get_reg(reg : register) : number {
-    return get_operand_value(reg)
+function initialize_machine() { 
+    set_operand_value(SP, BigInt(MEMORY_BOTTOM))
+    set_operand_value(BP, BigInt(MEMORY_BOTTOM))
 }
 
-function initialize_machine() { 
-    machine.registers[REGISTER.SP] = MEMORY_BOTTOM
-    machine.registers[REGISTER.BP] = MEMORY_BOTTOM
+type binop_fn_ty = (a:bigint, b:bigint) => bigint
+
+function apply_binop(fn : binop_fn_ty, instr : instruction) {
+    const dst_op = instr.operands[0]
+    const op1 = instr.operands[1]
+    const op2 = instr.operands[2]
+    const value = fn(get_operand_value(op1), get_operand_value(op2))
+    set_operand_value(dst_op, value)
 }
 
 let microcode : {[key in OP] : (instr : instruction)=>void} = {
     ADD: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        set_operand_value(dst_op, get_operand_value(op1) + get_operand_value(op2))
+        const fn = (a : bigint, b : bigint) => a + b
+        apply_binop(fn, instr)
     },
     GT: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        const value = get_operand_value(op1) > get_operand_value(op2) ? 1 : 0
-        set_operand_value(dst_op, value)
+        const fn = (a : bigint, b : bigint) => a > b ? 1n : 0n
+        apply_binop(fn, instr)
     },
     GE: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        const value = get_operand_value(op1) >= get_operand_value(op2) ? 1 : 0
-        set_operand_value(dst_op, value)
+        const fn = (a : bigint, b : bigint)  => a >= b ? 1n : 0n
+        apply_binop(fn, instr)
     },
     LE: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        const value = get_operand_value(op1) <= get_operand_value(op2) ? 1 : 0
-        set_operand_value(dst_op, value)
+        const fn = (a : bigint, b : bigint)  => a <= b ? 1n : 0n
+        apply_binop(fn, instr)
     },
     LT: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        const value = get_operand_value(op1) < get_operand_value(op2) ? 1 : 0
-        set_operand_value(dst_op, value)
+        const fn = (a : bigint, b : bigint)  => a < b ? 1n : 0n
+        apply_binop(fn, instr)
     },
     NE: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        const value = get_operand_value(op1) != get_operand_value(op2) ? 1 : 0
-        set_operand_value(dst_op, value)
+        const fn = (a : bigint, b : bigint)  => a !== b ? 1n : 0n
+        apply_binop(fn, instr)
     },
 
     EQ: instr => {
-        const dst_op = instr.operands[0]
-        const op1 = instr.operands[1]
-        const op2 = instr.operands[2]
-        const value = get_operand_value(op1) == get_operand_value(op2) ? 1 : 0
-        set_operand_value(dst_op, value)
+        const fn = (a : bigint, b : bigint)  => a === b ? 1n : 0n
+        apply_binop(fn, instr)
     },
 
     PUSH: instr => {
-        if (get_reg(SP) <= STACK_TOP) {
+        if (get_operand_value(SP) <= STACK_TOP) {
             throw Error("Reached stack top")
         }
-        machine.memory[get_reg(SP)] = get_operand_value(instr.operands[0])
+        const value = get_operand_value(instr.operands[0])
+        set_operand_value(ind(SP, imm(0n)), value)
         machine.registers[REGISTER.SP]--
     },
     POP: instr => {
         machine.registers[REGISTER.SP]++
-        if (get_reg(SP) > MEMORY_BOTTOM) {
+        if (get_operand_value(SP) > MEMORY_BOTTOM) {
             throw Error("Reached stack bottom")
         }
-        const v = machine.memory[get_reg(SP)]
+        const v = get_operand_value(ind(SP, imm(0n)))
         set_operand_value(instr.operands[0], v)
     },
     MOV: instr => {
@@ -236,7 +216,7 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     BR: instr => {
         if (instr.operands.length > 1) {
             // conditional branching
-            const is_true =  get_operand_value(instr.operands[0]) === 1
+            const is_true =  get_operand_value(instr.operands[0]) === 1n
             if (is_true) {
                 set_operand_value(PC, get_operand_value(instr.operands[1]))
             } else {
@@ -253,22 +233,22 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
 initialize_machine();
 
 let instrs = [
-    {operation: OP.MOV, operands: [R0, imm(0)]},
-    {operation: OP.MOV, operands: [R1, imm(0)]},
-    {operation: OP.LT, operands: [R2, R1, imm(100)]},
-    {operation: OP.BR, operands: [R2, imm(4), imm(7)]},
-    {operation: OP.ADD, operands: [R1, R1, imm(1)]},
+    {operation: OP.MOV, operands: [R0, imm(0n)]},
+    {operation: OP.MOV, operands: [R1, imm(0n)]},
+    {operation: OP.LT, operands: [R2, R1, imm(100n)]},
+    {operation: OP.BR, operands: [R2, imm(4n), imm(7n)]},
+    {operation: OP.ADD, operands: [R1, R1, imm(1n)]},
     {operation: OP.ADD, operands: [R0, R1, R0]},
-    {operation: OP.BR, operands: [imm(2)]},
+    {operation: OP.BR, operands: [imm(2n)]},
     {operation: OP.DONE, operands: []},
 ]
 
 const run = () => {
-    let op = instrs[get_reg(PC)]
+    let op = instrs[Number(get_operand_value(PC))]
     while(op.operation !== OP.DONE) {
         // console.log(instruction_to_string(op))
         microcode[op.operation](op)
-        op = instrs[machine.registers[REGISTER.PC]++];
+        op = instrs[Number(machine.registers[REGISTER.PC]++)];
     }
 }
 
@@ -278,3 +258,7 @@ instrs.forEach((x, i) => {
 })
 run()
 console.log(machine)
+
+const view = new DataView(machine.registers)
+console.log(view.getBigInt64(0))
+
