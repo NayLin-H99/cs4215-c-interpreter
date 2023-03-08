@@ -74,14 +74,14 @@ postfixExpression:
     },
 additiveExpression:
     (root: any) => {
-        push_instr({operation: OP.POP, operands: [REGISTER.R1]});
-        instrs[wc++] = {operation: OP.POP, operands: [REGISTER.R2]}
-        instrs[wc++] = {operation: OP.ADD, operands: [REGISTER.R1, REGISTER.R2]}
+        push_instr({operation: OP.POP, operands: [R1]});
+        instrs[wc++] = {operation: OP.POP, operands: [R2]}
+        instrs[wc++] = {operation: OP.ADD, operands: [R1, R2]}
     },
 multiplicativeExpression:
     (root: any) => {
-        instrs[wc++] = {operation: OP.POP, operands: [REGISTER.R1]}
-        instrs[wc++] = {operation: OP.POP, operands: [REGISTER.R2]}
+        instrs[wc++] = {operation: OP.POP, operands: [R1]}
+        instrs[wc++] = {operation: OP.POP, operands: [R2]}
         // instrs[wc++] = {operation: OP.MULT, operands: [REGISTER.R1, REGISTER.R2]}
     }
 }
@@ -103,11 +103,11 @@ const compile_program = (root: any) => {
 //             value_index(env[frame_index], x)]
 // }
 
-const value_index = (frame : Map<string, any>, x) => {
-  for (let i = 0; i < frame.length; i++) {
-    if (frame[i] === x) return i
-  }
-  return -1;
-}
+// const value_index = (frame : Map<string, any>, x:any) => {
+//   for (let i = 0; i < frame.length; i++) {
+//     if (frame[i] === x) return i
+//   }
+//   return -1;
+// }
 
 // print_tree(tree, 0)

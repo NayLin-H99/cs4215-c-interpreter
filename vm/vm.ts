@@ -1,6 +1,3 @@
-import { memoryUsage } from "process"
-import { arrayBuffer } from "stream/consumers"
-
 export enum REGISTER { 
     R0,
     R1,
@@ -102,14 +99,14 @@ const instruction_to_string = (instr : instruction) =>
 
 
 const REGISTER_COUNT = 8
-const R0 = register(REGISTER.R0)
-const R1 = register(REGISTER.R1)
-const R2 = register(REGISTER.R2)
-const R3 = register(REGISTER.R3)
-const PC = register(REGISTER.PC)
-const BP = register(REGISTER.BP)
-const SP = register(REGISTER.SP)
-const RA = register(REGISTER.RA)
+export const R0 = register(REGISTER.R0)
+export const R1 = register(REGISTER.R1)
+export const R2 = register(REGISTER.R2)
+export const R3 = register(REGISTER.R3)
+export const PC = register(REGISTER.PC)
+export const BP = register(REGISTER.BP)
+export const SP = register(REGISTER.SP)
+export const RA = register(REGISTER.RA)
 
 const WORD_SIZE = 8
 
@@ -277,11 +274,13 @@ function print_machine() {
     }
 }
 
+/*
 instrs.forEach((x, i) => {
     console.log(`${i} : ${instruction_to_string(x)}`)
 })
 run()
 
 print_machine()
+*/
 
 
