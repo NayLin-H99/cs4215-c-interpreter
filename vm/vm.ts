@@ -99,14 +99,15 @@ const instruction_to_string = (instr : instruction) =>
 
 
 const REGISTER_COUNT = 8
-export const R0 = register(REGISTER.R0)
-export const R1 = register(REGISTER.R1)
-export const R2 = register(REGISTER.R2)
-export const R3 = register(REGISTER.R3)
-export const PC = register(REGISTER.PC)
-export const BP = register(REGISTER.BP)
-export const SP = register(REGISTER.SP)
-export const RA = register(REGISTER.RA)
+export const
+    R0 = register(REGISTER.R0),
+    R1 = register(REGISTER.R1),
+    R2 = register(REGISTER.R2),
+    R3 = register(REGISTER.R3), 
+    PC = register(REGISTER.PC), 
+    BP = register(REGISTER.BP), 
+    SP = register(REGISTER.SP), 
+    RA = register(REGISTER.RA);
 
 const WORD_SIZE = 8
 
