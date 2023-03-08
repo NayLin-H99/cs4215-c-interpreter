@@ -1,7 +1,7 @@
 import { memoryUsage } from "process"
 import { arrayBuffer } from "stream/consumers"
 
-enum REGISTER { 
+export enum REGISTER { 
     R0,
     R1,
     R2,
@@ -12,37 +12,37 @@ enum REGISTER {
     RA, // Return value
 }
 
-type register = { 
+export type register = { 
     tag: "reg"
     reg: REGISTER
 }
 
-function register(reg : REGISTER) : register {
+export function register(reg : REGISTER) : register {
     return {
         tag: "reg",
         reg: reg
     }
 }
 
-type imm = {
+export type imm = {
     tag: "imm"
     immediate: bigint
 }
 
-function imm(n : bigint) : imm {
+export function imm(n : bigint) : imm {
     return {
         tag: "imm",
         immediate: n
     }
 }
 
-type ind = {
+export type ind = {
     tag: "ind"
     reg: register
     displacement: imm
 }
 
-function ind(reg: register, displacement : imm) : ind {
+export function ind(reg: register, displacement : imm) : ind {
     return {
         tag: "ind",
         reg: reg,
@@ -50,10 +50,10 @@ function ind(reg: register, displacement : imm) : ind {
     }
 }
 
-type operand = register | imm | ind
+export type operand = register | imm | ind
 
 
-enum OP {
+export enum OP {
     /* BINOP */
     ADD = "ADD",
     GT = "GT",
@@ -71,7 +71,7 @@ enum OP {
     DONE = 'DONE'
 }
 
-type instruction = {
+export type instruction = {
     operation: OP
     operands: operand[]
 }
