@@ -69,7 +69,6 @@ unaryOperator
 castExpression
     :   '(' typeName ')' castExpression
     |   unaryExpression
-    |   DigitSequence // for
     ;
 
 multiplicativeExpression

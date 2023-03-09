@@ -53,6 +53,10 @@ export type operand = register | imm | ind
 export enum OP {
     /* BINOP */
     ADD = "ADD",
+    SUB = "SUB",
+    MULT = "MULT",
+    DIV = "DIV",
+    MOD = "MOD",
     GT = "GT",
     GE = "GE",
     LT = "LT",
@@ -174,6 +178,22 @@ function apply_binop(fn : binop_fn_ty, instr : instruction) {
 let microcode : {[key in OP] : (instr : instruction)=>void} = {
     ADD: instr => {
         const fn = (a : bigint, b : bigint) => a + b
+        apply_binop(fn, instr)
+    },
+    SUB: instr => {
+        const fn = (a : bigint, b : bigint) => a - b
+        apply_binop(fn, instr)
+    },
+    MULT: instr => {
+        const fn = (a : bigint, b : bigint) => a * b
+        apply_binop(fn, instr)
+    },
+    DIV: instr => {
+        const fn = (a : bigint, b : bigint) => a / b
+        apply_binop(fn, instr)
+    },
+    MOD: instr => {
+        const fn = (a : bigint, b : bigint) => a % b
         apply_binop(fn, instr)
     },
     GT: instr => {

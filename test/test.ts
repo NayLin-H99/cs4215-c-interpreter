@@ -9,9 +9,9 @@ import * as fs from 'fs';
 import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/vm'
 
 const file_path: string = './test/test_files/expression.c';
-const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
+// const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
 // const inputStream = CharStreams.fromString("int c = a + b;");
-// const inputStream = CharStreams.fromString("int a = 1 + 2;");
+const inputStream = CharStreams.fromString("int a = 1 + 2 + 3;");
 const lexer = new CLexer(inputStream);
 const tokenStream = new CommonTokenStream(lexer);
 const parser = new CParser(tokenStream);
@@ -26,6 +26,16 @@ const is_rule = (node:any) =>
     const print_tree = (root : any, depth : number) => {
     if (!root) return;
     if (is_rule(root)) {
+        if (get_rule_name(root) === "additiveExpression") {
+            console.log("ADD EXPRESSION");
+            console.log(root.childCount)
+            // console.log("CHILD 0")
+            // console.log(get_rule_name(root.children[0]))
+            // console.log("CHILD 1")
+            // console.log(root.children[1].symbol.text)
+            // console.log("CHILD 2")
+            // console.log(get_rule_name(root.children[2]))
+        }
         // console.log("-".repeat(depth * 2) + "RULE: " + get_rule_name(root))
         const rule = get_rule_name(root)
     } else {
@@ -42,17 +52,47 @@ const is_rule = (node:any) =>
 let wc = 0;
 // instrs: instruction array
 let instrs = [];
-function push_instr(instr : instruction) {
-    instrs[wc++] = instr;
+function push_instr(...instr_lst : instruction[]) {
+    instr_lst.forEach(
+        i => {
+            instrs[wc++] = i;
+        }
+    )
 }
 // comp_env: compile env (an array of frames that each contain dcls/params mappings)
 let frame_idx = 0;
 let comp_env: Map<string, any>[] = [];
 
+// helper function for additiveExpression and multiplicativeExpression
+function binop_instrs(root: any) {
+    const BINOP : Record<string, OP> = {
+        "+" : OP.ADD,
+        "-" : OP.SUB,
+        "*" : OP.MULT,
+        "/" : OP.DIV,
+        "%" : OP.MOD
+    }
+
+    compile(root.children[0]);
+    if (root.childCount >= 2) {
+        for (let i = 1; i < root.childCount; i += 2) {
+            compile(root.children[i + 1]);
+            push_instr(
+                {operation: OP.POP, operands: [R2]},
+                {operation: OP.POP, operands: [R1]},
+                {operation: BINOP[root.children[i].symbol.text], operands: [R0, R1, R2]},
+                {operation: OP.PUSH, operands: [R0]}
+            );
+        }
+    }
+}
+
+
 /**
  * Given a rule node, maps to a corresponding compile function
 */
-type comp_map = { [key: string]: (root: any) => void };
+type compile_fn_ty = (root: any) => void;
+type comp_map = Record<string, compile_fn_ty>;
 const compile_comp: comp_map = {
 primaryExpression:
     (root: any) => {
@@ -84,26 +124,21 @@ postfixExpression:
     },
 additiveExpression:
     (root: any) => {
-        if (root.childCount >= 2) {
-            // TODO: handle i.e. 1 + 1 + 1 and operators: '+'|'-'
-            compile(root.children[0]);
-            compile(root.children[1]);
-            push_instr({operation: OP.POP, operands: [R1]});
-            push_instr({operation: OP.POP, operands: [R2]});
-            push_instr({operation: OP.ADD, operands: [R1, R2]});
-        } else {
-            compile(root.children[0]);
-        }
+        // multiplicativeExpression (('+'|'-') multiplicativeExpression)*
+        binop_instrs(root);
     },
 multiplicativeExpression:
     (root: any) => {
-        // TODO: handle i.e. 1 * 2 / 3 and operators: '*'|'/'|'%'
+        // castExpression (('*'|'/'|'%') castExpression)*
+        binop_instrs(root);
+    },
+castExpression:
+    (root: any) => {
+        // '(' typeName ')' castExpression | unaryExpression | DigitSequence // for
         if (root.childCount >= 2) {
-            push_instr({operation: OP.POP, operands: [R1]});
-            push_instr({operation: OP.POP, operands: [R2]});
-            // push_instr(operation: OP.MULT, operands: [R1, R2]});
+            // '(' typeName ')' castExpression
         } else {
-            compile(root.children[0])
+            // unaryExpression | DigitSequence
         }
     }
 }
@@ -132,4 +167,4 @@ const compile_program = (root: any) => {
 //   return -1;
 // }
 
-// print_tree(tree, 0)
+print_tree(tree, 0)
