@@ -28,7 +28,7 @@ const operand_to_string = (operand : operand) =>
     operand.tag === "reg" ? register_to_string(operand) :
     operand.tag === "ind" ? ind_to_string(operand) : "UNSUPPORTED OPERAND"
 
-const instruction_to_string = (instr : instruction) =>
+export const instruction_to_string = (instr : instruction) =>
     op_to_string(instr.operation) + " " + instr.operands.map(operand_to_string).join(",")
 
 

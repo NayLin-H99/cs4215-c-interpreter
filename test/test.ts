@@ -4,14 +4,15 @@ import {
     Token
 } from "antlr4ts";
 import { CLexer } from './generated/CLexer'
-import { CParser } from './generated/CParser'
+import { CParser, ExternalDeclarationContext } from './generated/CParser'
 import * as fs from 'fs';
 import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/datastructures'
+import { instruction_to_string } from "../vm/vm"
 
 const file_path: string = './test/test_files/expression.c';
 // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
 // const inputStream = CharStreams.fromString("int c = a + b;");
-const inputStream = CharStreams.fromString("int a = 1 + 2 + 3;");
+const inputStream = CharStreams.fromString("int a = 1 + (2 - 3) * 4 - 5 / 6;");
 const lexer = new CLexer(inputStream);
 const tokenStream = new CommonTokenStream(lexer);
 const parser = new CParser(tokenStream);
@@ -51,13 +52,9 @@ const is_rule = (node:any) =>
 // wc: write counter
 let wc = 0;
 // instrs: instruction array
-let instrs = [];
+let instrs : instruction[] = [];
 function push_instr(...instr_lst : instruction[]) {
-    instr_lst.forEach(
-        i => {
-            instrs[wc++] = i;
-        }
-    )
+    instr_lst.forEach(i => instrs[wc++] = i)
 }
 // comp_env: compile env (an array of frames that each contain dcls/params mappings)
 let frame_idx = 0;
@@ -98,12 +95,12 @@ primaryExpression:
     (root: any) => {
         if (root.Constant() !== undefined) {
             // console.log("CONSTANT: " + root.Constant().symbol.text);
-            push_instr({operation: OP.PUSH, operands: [imm(BigInt(root.symbol.text))]});
+            push_instr({operation: OP.PUSH, operands: [imm(BigInt(root.Constant().symbol.text))]});
         } else if (root.Identifier() !== undefined) {
             // console.log("IDENTIFIER: " + root.Identifier().symbol.text)
             // TODO: either just give position of args in comp_env or give the actual val?
             // TODO: check type of val before pushing
-            let val = comp_env[frame_idx].get(root.symbol.text)
+            let val = comp_env[frame_idx].get(root.Identifier().symbol.text)
             // push_instr({operation: OP.PUSH, operands: [imm(BigInt(val))]});
         } else if (root.expression() !== undefined) {
             // console.log("EXPRESSION: " + get_rule_name(root.children[1]))
@@ -113,14 +110,10 @@ primaryExpression:
             // TODO: handle strings
         }
     },
-postfixExpression:
-    (root: any)=> {
-        // (primaryExpression)
-        //('[' expression ']'
-        //| '(' argumentExpressionList? ')'
-        //| ('.' | '->') Identifier
-        //| ('++' | '--')
-        //)*
+expression: 
+    (root: any) => {
+        // assignmentExpression (',' assignmentExpression)*
+        compile(root.children[0])
     },
 additiveExpression:
     (root: any) => {
@@ -134,23 +127,156 @@ multiplicativeExpression:
     },
 castExpression:
     (root: any) => {
-        // '(' typeName ')' castExpression | unaryExpression | DigitSequence // for
+        // '(' typeName ')' castExpression | unaryExpression
         if (root.childCount >= 2) {
             // '(' typeName ')' castExpression
         } else {
-            // unaryExpression | DigitSequence
+            // unaryExpression
+            compile(root.children[0])
         }
-    }
+    },
+unaryExpression:
+    (root: any) => {
+        // ('++' |  '--' | 'sizeof')* (postfixExpression | unaryOperator castExpression | ('sizeof') '(' typeName')')
+        if (root.childCount > 1) throw Error("NOT IMPLEMENTED: unaryExpression")
+        if (root.postfixExpression !== undefined) {
+            // postfixExpression
+            compile(root.children[root.childCount - 1])
+            for (let i = 0; i < root.childCount - 1; i++) {
+                // POP
+                // do opr
+                // PUSH
+            }
+        } else if (root.castExpression !== undefined) {
+            // unaryOperator castExpression
+            throw Error("NOT IMPLEMENTED: unaryExpression")
+        } else {
+            // typeName
+            throw Error("NOT IMPLEMENTED: unaryExpression")
+        }
+    },
+postfixExpression:
+    (root: any) => {
+        // (primaryExpression) ('[' expression ']' | '(' argumentExpressionList? ')'| ('.' | '->') Identifier | ('++' | '--'))*
+        if (root.childCount === 1) {
+            compile(root.children[0]);
+        }
+    },
+compilationUnit: 
+    (root: any) => {
+        // externalDeclaration+ EOF
+        for (let i=0; i<root.childCount-1; i++) {
+            compile(root.children[i])
+        }
+    },
+externalDeclaration:
+    (root: any) => {
+        // functionDefinition | declaration | ';'
+        // if (root.children[0].symbol.text === ";") return;
+        compile(root.children[0])
+    },
+declaration:
+    (root: any) => {
+        // declarationSpecifiers initDeclaratorList? ';'
+        compile(root.children[1])
+    },
+declarationSpecifiers:
+    (root: any) => {
+        // for (let i=0; i<root.childCount; i++) {
+        //     compile(root.children[i])
+        // }
+    },
+initDeclaratorList:
+    (root: any) => {
+        // initDeclarator (',' initDeclarator)*
+        compile(root.children[0]);
+    },
+initDeclarator:
+    (root: any) => {
+        // declarator ('=' initializer)?
+        compile(root.children[2]);
+    },
+declarator:
+    (root: any) => {
+        // pointer? directDeclarator
+    },
+directDeclarator:
+    (root: any) => { 
+        //     Identifier
+        // |   '(' declarator ')'
+        // |   directDeclarator '[' DigitSequence? ']'
+        // |   directDeclarator '(' parameterList ')'
+        // |   directDeclarator '(' identifierList? ')'
+    },
+initializer:
+    (root: any) => {
+        // assignmentExpression
+        // |   '{' initializerList ','? '}'
+        compile(root.children[0])
+    },
+assignmentExpression:
+    (root: any) => {
+        // conditionalExpression
+        // |   unaryExpression assignmentOperator assignmentExpression
+        // |   DigitSequence // for
+        compile(root.children[0])
+    },
+conditionalExpression:
+    (root: any) => {
+        // logicalOrExpression ('?' expression ':' conditionalExpression)?
+        compile(root.children[0])
+    },
+logicalOrExpression:
+    (root: any) => {
+        // logicalAndExpression ( '||' logicalAndExpression)*
+        compile(root.children[0])
+    },
+logicalAndExpression:
+    (root: any) => {
+        // inclusiveOrExpression ('&&' inclusiveOrExpression)*
+        compile(root.children[0])
+    },
+inclusiveOrExpression:
+    (root: any) => {
+        // exclusiveOrExpression ('|' exclusiveOrExpression)*
+        compile(root.children[0])
+    },
+exclusiveOrExpression:
+    (root: any) => {
+        // andExpression ('^' andExpression)*
+        compile(root.children[0])
+    },
+andExpression:
+    (root: any) => {
+        // equalityExpression ( '&' equalityExpression)*
+        compile(root.children[0])
+    },
+equalityExpression:
+    (root: any) => {
+        // relationalExpression (('=='| '!=') relationalExpression)*
+        compile(root.children[0])
+    },
+relationalExpression:
+    (root: any) => {
+        // shiftExpression (('<'|'>'|'<='|'>=') shiftExpression)*
+        compile(root.children[0])
+    },
+shiftExpression:
+    (root: any) => {
+        // additiveExpression (('<<'|'>>') additiveExpression)*
+        compile(root.children[0])
+    },
 }
 
 const compile = (root: any) => {
-    return compile_comp[get_rule_name(root)](root)
+    console.log(get_rule_name(root))
+    return compile_comp[get_rule_name(root)](root);
 } 
 
 const compile_program = (root: any) => {
     wc = 0;
     instrs = [];
-    return compile(root)
+    return compile(root);
 }
 
 // const compile_time_environment_position = (env, x) => {
@@ -167,4 +293,6 @@ const compile_program = (root: any) => {
 //   return -1;
 // }
 
-print_tree(tree, 0)
+compile_program(tree)
+instrs.map(instruction_to_string).forEach(i => console.log(i))
+// print_tree(tree, 0)
