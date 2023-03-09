@@ -6,7 +6,7 @@ import {
 import { CLexer } from './generated/CLexer'
 import { CParser } from './generated/CParser'
 import * as fs from 'fs';
-import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/vm'
+import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/datastructures'
 
 const file_path: string = './test/test_files/expression.c';
 // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));

@@ -1,81 +1,11 @@
-export enum REGISTER { 
-    R0,
-    R1,
-    R2,
-    R3,
-    PC, // instruction pointer
-    BP, // Stack base 
-    SP, // Stack top
-    RA, // Return value
-}
+/*
+This file contains the core logic of the VM. Should only export run_vm function
+*/
 
-export type register = { 
-    tag: "reg"
-    reg: REGISTER
-}
-
-export function register(reg : REGISTER) : register {
-    return {
-        tag: "reg",
-        reg: reg
-    }
-}
-
-export type imm = {
-    tag: "imm"
-    immediate: bigint
-}
-
-export function imm(n : bigint) : imm {
-    return {
-        tag: "imm",
-        immediate: n
-    }
-}
-
-export type ind = {
-    tag: "ind"
-    reg: register
-    displacement: imm
-}
-
-export function ind(reg: register, displacement : imm) : ind {
-    return {
-        tag: "ind",
-        reg: reg,
-        displacement: displacement,
-    }
-}
-
-export type operand = register | imm | ind
-
-
-export enum OP {
-    /* BINOP */
-    ADD = "ADD",
-    SUB = "SUB",
-    MULT = "MULT",
-    DIV = "DIV",
-    MOD = "MOD",
-    GT = "GT",
-    GE = "GE",
-    LT = "LT",
-    LE = "LE",
-    EQ = "EQ",
-    NE = "NE",
-
-    /* CONTROL FLOW */
-    MOV = 'MOV',
-    BR = 'BR',
-    PUSH = 'PUSH',
-    POP = 'POP',
-    DONE = 'DONE'
-}
-
-export type instruction = {
-    operation: OP
-    operands: operand[]
-}
+import {
+    OP, operand, imm, REGISTER, register, ind, instruction,
+    R0, R1, R2, R3, PC, BP, SP, RA
+} from './datastructures'
 
 const op_to_string = (op : OP) => op.toLowerCase()
 
@@ -103,15 +33,6 @@ const instruction_to_string = (instr : instruction) =>
 
 
 const REGISTER_COUNT = 8
-export const
-    R0 = register(REGISTER.R0),
-    R1 = register(REGISTER.R1),
-    R2 = register(REGISTER.R2),
-    R3 = register(REGISTER.R3), 
-    PC = register(REGISTER.PC), 
-    BP = register(REGISTER.BP), 
-    SP = register(REGISTER.SP), 
-    RA = register(REGISTER.RA);
 
 const WORD_SIZE = 8
 
@@ -260,8 +181,6 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     DONE: instr => {},
 }
 
-initialize_machine();
-
 let instrs = [
     {operation: OP.MOV, operands: [R0, imm(0n)]},
     {operation: OP.MOV, operands: [R1, imm(0n)]},
@@ -277,7 +196,11 @@ let instrs = [
     {operation: OP.DONE, operands: []},
 ]
 
-const run = () => {
+export const run_vm = (instrs : instruction[]) => {
+    instrs.forEach((x, i) => {
+        console.log(`${i} : ${instruction_to_string(x)}`)
+    })
+    initialize_machine();
     let op = instrs[Number(get_operand_value(PC))]
     while(op.operation !== OP.DONE) {
         // console.log(instruction_to_string(op))
@@ -295,13 +218,7 @@ function print_machine() {
     }
 }
 
-/*
-instrs.forEach((x, i) => {
-    console.log(`${i} : ${instruction_to_string(x)}`)
-})
-run()
-
-print_machine()
-*/
+// run_vm(instrs)
+// print_machine()
 
 
