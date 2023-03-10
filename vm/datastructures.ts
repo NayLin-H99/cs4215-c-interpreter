@@ -70,7 +70,8 @@ export enum OP {
 
     /* CONTROL FLOW */
     MOV = 'MOV',
-    BR = 'BR',
+    BR = 'BR',          // branch absolute. br r0, 8, 16 ==> if(r0) goto 8 else goto 16. br 8 ==> goto 8
+    BRR = 'BRR',        // branch relative. brr r0, 8, 16 ==> if(r0) goto pc+8 else goto pc+16. brr 16 ==> goto pc+16
     PUSH = 'PUSH',
     POP = 'POP',
     DONE = 'DONE'

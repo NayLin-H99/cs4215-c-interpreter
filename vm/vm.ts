@@ -83,11 +83,13 @@ function get_operand_value(operand : operand) : bigint {
     }
 }
 
+const $ = get_operand_value
+
 function set_operand_value(operand : operand, value : bigint) : void {
     switch(operand.tag) {
         case "imm": throw Error("Immediates has no memory storage")
         case "reg": machine.registers[operand.reg] = value; break;
-        case "ind": write_word(get_operand_value(operand.reg) + get_operand_value(operand.displacement), value); break;
+        case "ind": write_word($(operand.reg) + $(operand.displacement), value); break;
     }
 }
 
@@ -111,7 +113,7 @@ function apply_binop(fn : binop_fn_ty, instr : instruction) {
     const dst_op = instr.operands[0]
     const op1 = instr.operands[1]
     const op2 = instr.operands[2]
-    const value = fn(get_operand_value(op1), get_operand_value(op2))
+    const value = fn($(op1), $(op2))
     set_operand_value(dst_op, value)
 }
 
@@ -163,44 +165,54 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     },
 
     PUSH: instr => {
-        if (get_address_type(get_operand_value(SP)) !== "stack") {
-            throw Error("Reached stack top " + get_operand_value(SP))
+        if (get_address_type($(SP)) !== "stack") {
+            throw Error("Reached stack top " + $(SP))
         }
-        const value = get_operand_value(instr.operands[0])
+        const value = $(instr.operands[0])
         set_operand_value(ind(SP, imm(0n)), value)
         machine.registers[REGISTER.SP] -= 8n
     },
     POP: instr => {
         machine.registers[REGISTER.SP] += 8n
-        if (get_address_type(get_operand_value(SP)) !== "stack") {
-            throw Error("Reached stack bottom " + get_operand_value(SP))
+        if (get_address_type($(SP)) !== "stack") {
+            throw Error("Reached stack bottom " + $(SP))
         }
-        const v = get_operand_value(ind(SP, imm(0n)))
+        const v = $(ind(SP, imm(0n)))
         set_operand_value(instr.operands[0], v)
     },
     MOV: instr => {
         const dst_op = instr.operands[0]
         const src_op = instr.operands[1]
-        set_operand_value(dst_op, get_operand_value(src_op))
+        set_operand_value(dst_op, $(src_op))
     },
     BR: instr => {
         if (instr.operands.length > 1) {
             // conditional branching
-            const is_true =  get_operand_value(instr.operands[0]) === 1n
+            const is_true =  $(instr.operands[0]) > 0n
             if (is_true) {
-                set_operand_value(PC, get_operand_value(instr.operands[1]))
+                set_operand_value(PC, $(instr.operands[1]))
             } else {
-                set_operand_value(PC, get_operand_value(instr.operands[2]))
+                set_operand_value(PC, $(instr.operands[2]))
             }
         } else if (instr.operands.length === 1) {
             // unconditional branch
-            set_operand_value(PC, get_operand_value(instr.operands[0]))
+            set_operand_value(PC, $(instr.operands[0]))
+        }
+    },
+    BRR: instr => {
+        set_operand_value(PC, $(PC) - 8n) // a hack to reset the pre-incremented value in machine
+        if (instr.operands.length > 1) {
+            const is_true = $(instr.operands[0]) > 0n 
+            const offset = is_true ? $(instr.operands[1]) : $(instr.operands[2])
+            set_operand_value(PC, $(PC) + offset)
+        } else if (instr.operands.length === 1) {
+            set_operand_value(PC, $(PC) + $(instr.operands[0]))
         }
     },
     DONE: instr => {},
 }
 
-let instrs = [
+let sum_of_100 = [
     {operation: OP.MOV, operands: [R0, imm(0n)]},
     {operation: OP.MOV, operands: [R1, imm(0n)]},
     {operation: OP.LT, operands: [R2, R1, imm(100n)]},
@@ -215,12 +227,27 @@ let instrs = [
     {operation: OP.DONE, operands: []},
 ]
 
+let sum_of_100_relative = [
+    {operation: OP.MOV, operands: [R0, imm(0n)]},
+    {operation: OP.MOV, operands: [R1, imm(0n)]},
+    {operation: OP.LT, operands: [R2, R1, imm(100n)]},
+    {operation: OP.BRR, operands: [R2, imm(8n), imm(32n)]},
+    {operation: OP.ADD, operands: [R1, R1, imm(1n)]},
+    {operation: OP.ADD, operands: [R0, R1, R0]},
+    {operation: OP.BRR, operands: [imm(-32n)]},
+    {operation: OP.PUSH, operands: [imm(11n)]},
+    {operation: OP.PUSH, operands: [imm(12n)]},
+    {operation: OP.PUSH, operands: [imm(13n)]},
+    {operation: OP.POP, operands: [R3]},
+    {operation: OP.DONE, operands: []},
+]
+
 export const run_vm = (instrs : instruction[]) => {
     instrs.forEach((x, i) => {
         console.log(`${i * 8} : ${instruction_to_string(x)}`)
     })
     initialize_machine(instrs);
-    let op = instrs[Number(get_operand_value(PC) / 8n)]
+    let op = instrs[Number($(PC) / 8n)]
     while(op.operation !== OP.DONE) {
         op = instrs[Number(machine.registers[REGISTER.PC]) / 8];
         machine.registers[REGISTER.PC] += 8n
@@ -239,7 +266,7 @@ function print_machine() {
     }
 }
 
-run_vm(instrs)
+run_vm(sum_of_100_relative)
 print_machine()
 
 
