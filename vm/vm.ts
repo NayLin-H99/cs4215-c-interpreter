@@ -36,12 +36,16 @@ const REGISTER_COUNT = 8
 
 const WORD_SIZE = 8
 
-const SEGMENT_SIZE = 10
+const TEXT_SIZE = 100
+const HEAP_SIZE = 1000
+const STACK_SIZE = 1000
+
+
 // .text .heap .stack same size (might want to custom it later)
 // for now .text lives outside of memory
-const MEMORY_SIZE = SEGMENT_SIZE * 3
+const MEMORY_SIZE = TEXT_SIZE + HEAP_SIZE + STACK_SIZE
 const MEMORY_BOTTOM = MEMORY_SIZE - 1
-const STACK_TOP = MEMORY_BOTTOM - SEGMENT_SIZE
+const STACK_TOP = MEMORY_BOTTOM - STACK_SIZE
 
 type machine = {
     registers : BigInt64Array
@@ -55,15 +59,21 @@ let machine : machine = {
     builtins : {}
 }
 
-function read_word(address: bigint) {
+function read_word(address: bigint | number) {
     const view = new DataView(machine.memory)
     return view.getBigInt64(Number(address))
 }
 
-function write_word(address: bigint, value: bigint) {
+function write_word(address: bigint | number, value: bigint | number) {
     const view = new DataView(machine.memory)
-    view.setBigInt64(Number(address), value)
+    view.setBigInt64(Number(address), BigInt(value))
 }
+
+const get_address_type = (address: bigint | number) => 
+    address < 0 ? "invalid" :
+    address < TEXT_SIZE * WORD_SIZE ? "text" :
+    address < (TEXT_SIZE + HEAP_SIZE) * WORD_SIZE ? "heap" :
+    address < (TEXT_SIZE + HEAP_SIZE + STACK_SIZE) * WORD_SIZE ? "stack" : "invalid"
 
 function get_operand_value(operand : operand) : bigint {
     switch (operand.tag) {
@@ -81,7 +91,16 @@ function set_operand_value(operand : operand, value : bigint) : void {
     }
 }
 
-function initialize_machine() { 
+function initialize_machine(instrs: instruction[]) { 
+    if (instrs.length > TEXT_SIZE) {
+        throw Error("Instruction size larger than allocated text size")
+    }
+
+    // map instrs to text segment
+    instrs.forEach((_, idx) => {
+        write_word(idx*8, idx)
+    })
+
     set_operand_value(SP, BigInt(MEMORY_BOTTOM * 8))
     set_operand_value(BP, BigInt(MEMORY_BOTTOM * 8))
 }
@@ -144,8 +163,8 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     },
 
     PUSH: instr => {
-        if (get_operand_value(SP) <= STACK_TOP * 8) {
-            throw Error("Reached stack top")
+        if (get_address_type(get_operand_value(SP)) !== "stack") {
+            throw Error("Reached stack top " + get_operand_value(SP))
         }
         const value = get_operand_value(instr.operands[0])
         set_operand_value(ind(SP, imm(0n)), value)
@@ -153,8 +172,8 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     },
     POP: instr => {
         machine.registers[REGISTER.SP] += 8n
-        if (get_operand_value(SP) > MEMORY_BOTTOM * 8) {
-            throw Error("Reached stack bottom")
+        if (get_address_type(get_operand_value(SP)) !== "stack") {
+            throw Error("Reached stack bottom " + get_operand_value(SP))
         }
         const v = get_operand_value(ind(SP, imm(0n)))
         set_operand_value(instr.operands[0], v)
@@ -185,10 +204,10 @@ let instrs = [
     {operation: OP.MOV, operands: [R0, imm(0n)]},
     {operation: OP.MOV, operands: [R1, imm(0n)]},
     {operation: OP.LT, operands: [R2, R1, imm(100n)]},
-    {operation: OP.BR, operands: [R2, imm(4n), imm(7n)]},
+    {operation: OP.BR, operands: [R2, imm(32n), imm(56n)]},
     {operation: OP.ADD, operands: [R1, R1, imm(1n)]},
     {operation: OP.ADD, operands: [R0, R1, R0]},
-    {operation: OP.BR, operands: [imm(2n)]},
+    {operation: OP.BR, operands: [imm(16n)]},
     {operation: OP.PUSH, operands: [imm(11n)]},
     {operation: OP.PUSH, operands: [imm(12n)]},
     {operation: OP.PUSH, operands: [imm(13n)]},
@@ -198,14 +217,15 @@ let instrs = [
 
 export const run_vm = (instrs : instruction[]) => {
     instrs.forEach((x, i) => {
-        console.log(`${i} : ${instruction_to_string(x)}`)
+        console.log(`${i * 8} : ${instruction_to_string(x)}`)
     })
-    initialize_machine();
-    let op = instrs[Number(get_operand_value(PC))]
+    initialize_machine(instrs);
+    let op = instrs[Number(get_operand_value(PC) / 8n)]
     while(op.operation !== OP.DONE) {
+        op = instrs[Number(machine.registers[REGISTER.PC]) / 8];
+        machine.registers[REGISTER.PC] += 8n
         // console.log(instruction_to_string(op))
         microcode[op.operation](op)
-        op = instrs[Number(machine.registers[REGISTER.PC]++)];
     }
 }
 
@@ -214,11 +234,12 @@ function print_machine() {
     console.log(machine.registers)
     const view = new DataView(machine.memory)
     for (let i=0; i<MEMORY_SIZE;i++){
-        console.log(i*8 + ":" + view.getBigInt64(i * 8))
+        if (view.getBigInt64(i*8) != 0n)
+            console.log(i*8 + ":" + view.getBigInt64(i * 8))
     }
 }
 
-// run_vm(instrs)
-// print_machine()
+run_vm(instrs)
+print_machine()
 
 
