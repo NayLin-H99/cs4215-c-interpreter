@@ -21,6 +21,7 @@ let instructions = code_to_instructions({
     main: [
         {operation: OP.PUSH, operands:[imm(100)]},
         {operation: OP.CALL, operands:[{tag:"label", name:"fn_sum_of_n"}]},
+        {operation: OP.POP, operands:[R1]}, // pop away the argument used previously
         {operation: OP.DONE, operands:[R0]}
     ],
     fn_sum_of_n: [
