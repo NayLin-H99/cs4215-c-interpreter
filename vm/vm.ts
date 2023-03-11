@@ -209,6 +209,8 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
             set_operand_value(PC, $(PC) + $(instr.operands[0]))
         }
     },
+    CALL : instr => {},
+    RET : instr => {},
     DONE: instr => {},
 }
 
@@ -266,7 +268,7 @@ function print_machine() {
     }
 }
 
-run_vm(sum_of_100_relative)
-print_machine()
+// run_vm(sum_of_100_relative)
+// print_machine()
 
 

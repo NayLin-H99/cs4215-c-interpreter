@@ -30,10 +30,10 @@ export type imm = {
     immediate: bigint
 }
 
-export function imm(n : bigint) : imm {
+export function imm(n : bigint | number) : imm {
     return {
         tag: "imm",
-        immediate: n
+        immediate: BigInt(n)
     }
 }
 
@@ -74,6 +74,9 @@ export enum OP {
     BRR = 'BRR',        // branch relative. brr r0, 8, 16 ==> if(r0) goto pc+8 else goto pc+16. brr 16 ==> goto pc+16
     PUSH = 'PUSH',
     POP = 'POP',
+
+    CALL = 'CALL',
+    RET  = 'RET',
     DONE = 'DONE'
 }
 
