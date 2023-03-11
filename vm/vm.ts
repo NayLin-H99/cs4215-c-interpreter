@@ -117,6 +117,23 @@ function apply_binop(fn : binop_fn_ty, instr : instruction) {
     set_operand_value(dst_op, value)
 }
 
+function vm_push(opr: operand) {
+    if (get_address_type($(SP)) !== "stack") {
+        throw Error("Reached stack top " + $(SP))
+    }
+    set_operand_value(ind(SP, imm(0n)), $(opr))
+    machine.registers[REGISTER.SP] -= 8n
+}
+
+function vm_pop(opr: operand) {
+    machine.registers[REGISTER.SP] += 8n
+    if (get_address_type($(SP)) !== "stack") {
+        throw Error("Reached stack bottom " + $(SP))
+    }
+    const v = $(ind(SP, imm(0n)))
+    set_operand_value(opr, v)
+}
+
 let microcode : {[key in OP] : (instr : instruction)=>void} = {
     ADD: instr => {
         const fn = (a : bigint, b : bigint) => a + b
@@ -164,22 +181,8 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
         apply_binop(fn, instr)
     },
 
-    PUSH: instr => {
-        if (get_address_type($(SP)) !== "stack") {
-            throw Error("Reached stack top " + $(SP))
-        }
-        const value = $(instr.operands[0])
-        set_operand_value(ind(SP, imm(0n)), value)
-        machine.registers[REGISTER.SP] -= 8n
-    },
-    POP: instr => {
-        machine.registers[REGISTER.SP] += 8n
-        if (get_address_type($(SP)) !== "stack") {
-            throw Error("Reached stack bottom " + $(SP))
-        }
-        const v = $(ind(SP, imm(0n)))
-        set_operand_value(instr.operands[0], v)
-    },
+    PUSH: instr => vm_push(instr.operands[0]),
+    POP: instr => vm_pop(instr.operands[0]),
     MOV: instr => {
         const dst_op = instr.operands[0]
         const src_op = instr.operands[1]
@@ -209,8 +212,18 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
             set_operand_value(PC, $(PC) + $(instr.operands[0]))
         }
     },
-    CALL : instr => {},
-    RET : instr => {},
+    CALL : instr => {
+        const fn_address = $(instr.operands[0])
+        vm_push(PC)
+        vm_push(BP)
+        set_operand_value(BP, $(SP))
+        set_operand_value(PC, fn_address)
+    },
+    RET : instr => {
+        set_operand_value(SP, $(BP))
+        vm_pop(BP)
+        vm_pop(PC)
+    },
     DONE: instr => {},
 }
 
@@ -226,7 +239,7 @@ let sum_of_100 = [
     {operation: OP.PUSH, operands: [imm(12n)]},
     {operation: OP.PUSH, operands: [imm(13n)]},
     {operation: OP.POP, operands: [R3]},
-    {operation: OP.DONE, operands: []},
+    {operation: OP.DONE, operands: [imm(0)]},
 ]
 
 let sum_of_100_relative = [
@@ -241,7 +254,7 @@ let sum_of_100_relative = [
     {operation: OP.PUSH, operands: [imm(12n)]},
     {operation: OP.PUSH, operands: [imm(13n)]},
     {operation: OP.POP, operands: [R3]},
-    {operation: OP.DONE, operands: []},
+    {operation: OP.DONE, operands: [imm(0)]},
 ]
 
 export const run_vm = (instrs : instruction[]) => {
@@ -256,6 +269,8 @@ export const run_vm = (instrs : instruction[]) => {
         // console.log(instruction_to_string(op))
         microcode[op.operation](op)
     }
+    // the first operand of DONE operation is the return value of the vm
+    return ($(op.operands[0]))
 }
 
 

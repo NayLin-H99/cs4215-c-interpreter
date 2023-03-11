@@ -2,6 +2,7 @@
   "scripts": {
     "prepublishOnly": "npm run test",
     "test": "tsc --version && npm run generate && tsc && node out/test/test.js",
+    "test_vm": "tsc && node out/test/test_vm.js",
     "generate": "antlr4ts test/C.g4 -no-listener -no-visitor -o test/generated -Xexact-output-dir",
     "eslint": "eslint ."
   },
