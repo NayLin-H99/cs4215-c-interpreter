@@ -234,6 +234,7 @@ declarator
 directDeclarator
     :   Identifier
     |   '(' declarator ')'
+    |   directDeclarator '[' constantExpression? ']'
     |   directDeclarator '[' DigitSequence? ']'
     |   directDeclarator '(' parameterList ')'
     |   directDeclarator '(' identifierList? ')'

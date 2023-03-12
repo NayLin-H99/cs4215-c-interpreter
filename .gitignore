@@ -3,3 +3,4 @@ out
 test/generated/
 .antlr
 test/.antlr
+src/parser/

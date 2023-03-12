@@ -1,12 +1,14 @@
 
-type primitives = {typename: "int" | "char" | "void", size: number}
-type arr        = {typename: "arr", ty: ty, n_elems: number | undefined}
-type struct     = {typename: "struct", structname: string, fields: ty[], fieldnames: string[]}
-type namedT     = {typename: "typedef", src: string, dst: string}
+export type primitives = {typename: "int" | "char" | "void" | "short" | "float" | "double", size: number}
+export type arr = {typename: "arr", ty: ty, n_elems: number | undefined}
+export type struct = {typename: "struct", structname: string, fields: ty[], fieldnames: string[]}
+export type namedT = {typename: "typedef", src: string, dst: string}
+export type ty = primitives | struct | arr | namedT
 
-type ty = primitives | struct | arr | namedT
+export const int  : primitives = {typename: "int",  size: 8}
+export const char : primitives = {typename: "char", size: 1}
 
-function get_type_name (ty: ty) : string {
+export function get_type_name (ty: ty) : string {
     return  ty.typename === "int" ? ty.typename :
             ty.typename === "char" ? ty.typename :
             ty.typename === "void" ? ty.typename :
@@ -14,9 +16,6 @@ function get_type_name (ty: ty) : string {
             ty.typename === "struct" ? ty.typename + "_" + ty.structname : 
             ty.typename === "typedef" ? ty.dst : "should not happen"
 }
-
-const int  : primitives = {typename: "int",  size: 8}
-const char : primitives = {typename: "char", size: 1}
 
 /*
 typedef struct Books {
