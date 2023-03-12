@@ -1,8 +1,8 @@
 
 
-import {OP, imm, ind, R0, R1, R2, R3} from '../vm/datastructures';
-import { code_to_instructions, n_arg_pos, lbl } from '../vm/ir'
-import { run_vm } from '../vm/vm'
+import {OP, imm, ind, R0, R1, R2, R3} from '../src/vm/datastructures';
+import { code_to_instructions, n_arg_pos, lbl } from '../src/vm/ir'
+import { run_vm } from '../src/vm/vm'
 
 /**
  * int sum_of_n(int n) {
