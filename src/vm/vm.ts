@@ -2,6 +2,7 @@
 This file contains the core logic of the VM. Should only export run_vm function
 */
 
+import { write } from 'fs'
 import {
     OP, operand, imm, REGISTER, register, ind, instruction,
     R0, R1, R2, R3, PC, BP, SP, RA
@@ -48,26 +49,50 @@ const MEMORY_BOTTOM = MEMORY_SIZE - 1
 const STACK_TOP = MEMORY_BOTTOM - STACK_SIZE
 
 type machine = {
-    registers : BigInt64Array
+    registers : BigUint64Array
     memory: ArrayBuffer
     builtins: object
 }
 
 let machine : machine = {
-    registers : new BigInt64Array(REGISTER_COUNT).fill(0n),
+    registers : new BigUint64Array(REGISTER_COUNT).fill(0n),
     memory: new ArrayBuffer(MEMORY_SIZE * WORD_SIZE),
     builtins : {}
 }
 
-function read_word(address: bigint | number) {
+function read_memory(address: bigint | number, size: bigint = 8n) {
     const view = new DataView(machine.memory)
-    return view.getBigInt64(Number(address))
+    return BigInt(size === 1n ? view.getUint8(Number(address)) : 
+        size === 2n ? view.getUint16(Number(address), true) : 
+        view.getBigUint64(Number(address), true))
+}
+
+function read_word(address: bigint | number) {
+    return BigInt(read_memory(address))
+}
+
+function write_memory(address: bigint | number, value: bigint, size: bigint = 8n) {
+    const mask = 
+        size === 1n ? 0xffn :
+        size === 2n ? 0xffffn : -1n;
+    
+    const view = new DataView(machine.memory)
+
+    if (size === 8n) {
+        view.setBigUint64(Number(address), value, true)
+    } else if (size === 1n) {
+        view.setUint8(Number(address), Number(value & mask))
+    } else if (size === 2n) {
+        view.setUint16(Number(address), Number(value & mask), true)
+    } else {
+        throw Error("unsupported write size")
+    }
 }
 
 function write_word(address: bigint | number, value: bigint | number) {
-    const view = new DataView(machine.memory)
-    view.setBigInt64(Number(address), BigInt(value))
+    write_memory(address, BigInt(value))
 }
+
 
 const get_address_type = (address: bigint | number) => 
     address < 0 ? "invalid" :
@@ -75,21 +100,29 @@ const get_address_type = (address: bigint | number) =>
     address < (TEXT_SIZE + HEAP_SIZE) * WORD_SIZE ? "heap" :
     address < (TEXT_SIZE + HEAP_SIZE + STACK_SIZE) * WORD_SIZE ? "stack" : "invalid"
 
-function get_operand_value(operand : operand) : bigint {
+function get_operand_value(operand : operand, size : bigint = 8n) : bigint {
+    const mask = 
+        size === 1n ? 0xffn :
+        size === 2n ? 0xffffn : -1n;
+    
     switch (operand.tag) {
-        case "imm": return operand.immediate
-        case "reg": return machine.registers[operand.reg]
-        case "ind": return read_word(get_operand_value(operand.reg) + get_operand_value(operand.displacement))
+        case "imm": return operand.immediate & mask
+        case "reg": return machine.registers[operand.reg] & mask
+        case "ind": return read_memory(get_operand_value(operand.reg) + get_operand_value(operand.displacement), size)
     }
 }
 
 const $ = get_operand_value
 
-function set_operand_value(operand : operand, value : bigint) : void {
+function set_operand_value(operand : operand, value : bigint, size : bigint = 8n) : void {
+    const mask = 
+        size === 1n ? 0xffn :
+        size === 2n ? 0xffffn : -1n;
+        
     switch(operand.tag) {
         case "imm": throw Error("Immediates has no memory storage")
-        case "reg": machine.registers[operand.reg] = value; break;
-        case "ind": write_word($(operand.reg) + $(operand.displacement), value); break;
+        case "reg": machine.registers[operand.reg] = (machine.registers[operand.reg] & ~mask) | (value & mask); break;
+        case "ind": write_memory($(operand.reg) + $(operand.displacement), value & mask, size); break;
     }
 }
 
@@ -184,9 +217,18 @@ let microcode : {[key in OP] : (instr : instruction)=>void} = {
     PUSH: instr => vm_push(instr.operands[0]),
     POP: instr => vm_pop(instr.operands[0]),
     MOV: instr => {
-        const dst_op = instr.operands[0]
-        const src_op = instr.operands[1]
-        set_operand_value(dst_op, $(src_op))
+        // specified size of read
+        if (instr.operands.length === 4) {
+            const dst_size = $(instr.operands[0])
+            const dst_op = instr.operands[1]
+            const src_size = $(instr.operands[2])
+            const src_op = instr.operands[3]
+            set_operand_value(dst_op, $(src_op, src_size), dst_size)
+        } else {
+            const dst_op = instr.operands[0]
+            const src_op = instr.operands[1]
+            set_operand_value(dst_op, $(src_op))
+        }
     },
     BR: instr => {
         if (instr.operands.length > 1) {
@@ -257,7 +299,7 @@ let sum_of_100_relative = [
     {operation: OP.DONE, operands: [imm(0)]},
 ]
 
-export const run_vm = (instrs : instruction[]) => {
+export const run_vm = (instrs : instruction[], debug:boolean = false) => {
     instrs.forEach((x, i) => {
         console.log(`${i * 8} : ${instruction_to_string(x)}`)
     })
@@ -270,20 +312,43 @@ export const run_vm = (instrs : instruction[]) => {
         microcode[op.operation](op)
     }
     // the first operand of DONE operation is the return value of the vm
+    if(debug) print_machine();
     return ($(op.operands[0]))
 }
 
 
 function print_machine() {
-    console.log(machine.registers)
+    console.log("Registers:")
+    for (let reg of machine.registers) {
+        console.log(reg.toString(16))
+    }
     const view = new DataView(machine.memory)
+    console.log("memory:")
     for (let i=0; i<MEMORY_SIZE;i++){
-        if (view.getBigInt64(i*8) != 0n)
-            console.log(i*8 + ":" + view.getBigInt64(i * 8))
+        if (view.getBigUint64(i*8, true) != 0n)
+            console.log(i*8 + ":" + view.getBigUint64(i * 8, true).toString(16))
     }
 }
 
-// run_vm(sum_of_100_relative)
+
+
+// let bit_fun_testcase = [
+//     {operation: OP.MOV, operands: [R0, imm(0xdeadbeefcafebaben)]},
+//     {operation: OP.MOV, operands: [imm(8), R1, imm(1), R0]},
+//     {operation: OP.ADD, operands: [R1, R1, imm(1)]},
+//     {operation: OP.MOV, operands: [imm(2), R0, imm(1), R1]},
+//     {operation: OP.PUSH, operands: [R0]},
+//     {operation: OP.MOV, operands: [imm(1), ind(BP, imm(0)), imm(1), imm(0x41)]},
+//     {operation: OP.MOV, operands: [imm(1), ind(BP, imm(1)), imm(1), imm(0x41)]},
+//     {operation: OP.MOV, operands: [imm(1), ind(BP, imm(2)), imm(1), imm(0x41)]},
+//     {operation: OP.MOV, operands: [imm(1), ind(BP, imm(3)), imm(1), imm(0x41)]},
+//     {operation: OP.MOV, operands: [imm(1), ind(BP, imm(4)), imm(1), imm(0x41)]},
+//     {operation: OP.MOV, operands: [imm(1), ind(BP, imm(5)), imm(1), imm(0x41)]},
+//     {operation: OP.MOV, operands: [imm(2), R3, imm(8), ind(BP, imm(0))]},
+//     {operation: OP.DONE, operands: [R0]},
+// ]
+
+// run_vm(bit_fun_testcase)
 // print_machine()
 
 

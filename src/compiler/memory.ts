@@ -4,14 +4,14 @@ import { ty, get_ty_size } from "./typesystem";
 import align from "./util"
 
 type dcl = {
-    name: string;
-    ty: ty
-    offset: number;
+    name: string;   // name of declaration
+    ty: ty          // type of declaration
+    offset: number; // offset in memory
 }
 
-type frame = dcl[];
+type frame = dcl[]; // dcl entries in the current frame
 
-// stack of frames
+// env is a stack of frames
 export type env = {
     frames: frame[];
     offset: number;
@@ -50,25 +50,33 @@ export function compile_dcl(name:string, ty: ty) : instruction[] {
 // assignment of 1 operand value to another
 export function compile_assign(name:string) : instruction[] {
     const dst = get_variable_operand(name)
+    const ty = get_variable(name)?.ty
+    if (ty === undefined) throw Error("writing to undeclared variable");
+    const size = get_ty_size(ty)
 
     return [
         {operation: OP.POP, operands: [R0]},
-        {operation: OP.MOV, operands:[dst, R0]}
+        {operation: OP.MOV, operands:[imm(size), dst, imm(8), R0]} // todo: mov correct size
     ]
 }
 
-function get_variable(name: string) : dcl | undefined {
+export function get_variable(name: string) : dcl | undefined {
     for (let frame of env.frames) {
         const found = frame.find(dcl => dcl.name === name);
         if (found) return found
     }
-    return undefined
+    // return global_frame.find(dcl => dcl.name === name);
+    return undefined;
 }
 
-export function get_variable_operand(name:string) : operand {
+export function get_ty_info(name: string) : ty | undefined {
+    return get_variable(name)?.ty;
+}
+
+export function get_variable_operand(name: string) : operand {
     const offset = get_variable(name)?.offset;
     if (offset === undefined) throw Error("Accessing variable that don't exist");
-    return ind(BP, imm(-offset))
+    return ind(BP, imm(-offset)) // [BP - offset]
 }
 
 
@@ -106,9 +114,14 @@ export function exit_block() {
 
 export function enter_function() {
     rts.push(env)
+    env = {
+        frames: [],
+        offset: 0
+    }
 }
 
 export function exit_function() {
-    const env = rts.pop()
-    if (env === undefined) throw Error("exiting a function without entering")
+    const restored_env = rts.pop();
+    if (restored_env === undefined) throw Error("exiting a function without entering")
+    env = restored_env
 }

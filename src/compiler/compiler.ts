@@ -9,7 +9,9 @@ import { CParser, ExternalDeclarationContext } from '../parser/CParser'
 import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/datastructures'
 import { instruction_to_string } from "../vm/vm"
 
-import { primitives, arr, struct, namedT, ty, int, char, get_type_name } from './typesystem'
+import { primitives, arr, struct, namedT, ty, int, char, get_type_name, get_ty_size, types } from './typesystem'
+
+import { env, reset_memory_env, compile_dcl, compile_assign, get_variable, get_ty_info, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
 
 const file_path: string = './test/test_files/expression.c';
 // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
@@ -18,8 +20,7 @@ const file_path: string = './test/test_files/expression.c';
 
 export default function parse_and_compile(input:string) {
     // reset env
-    comp_env = [{ next_frame: -1, prev_frame: -1, entries: [] }]
-    frame_idx = 0
+    reset_memory_env();
 
     const inputStream = CharStreams.fromString(input);
     const lexer = new CLexer(inputStream);
@@ -30,7 +31,8 @@ export default function parse_and_compile(input:string) {
     
     compile_program(tree)
 
-    console.log(JSON.stringify(comp_env))
+    // print the environment
+    print_env();
     
     return instrs;
 }
@@ -67,50 +69,20 @@ const print_tree = (root : any, depth : number) => {
  */
 type compile_fn_ty = (root: any) => void;
 type comp_map = Record<string, compile_fn_ty>;
-type dcl_entry = {
-    name: string    // name of variable
-    type: ty        // type of variable
-}
-type frame = {
-    next_frame: number      // idx of the next frame
-    prev_frame: number      // idx of the prev frame (nested)
-    entries: dcl_entry[]    // dcl entries in current frame
-}
+// let frame_idx = 0;
+// let comp_env: frame[] = [];
+// comp_env[frame_idx] = { next_frame: -1, prev_frame: -1, entries: [] }
 
-// types and corresponding sizes
-const types: Record<string, ty> = {
-    int: {typename:"int", size:8},
-    short: {typename:"short", size: 2},
-    float: {typename:"float", size: 8},
-    double: {typename:"double", size: 8},
-    char: {typename:"char", size: 1},
-    void: {typename:"void", size: 1}
-}
+// function get_var(name:string, curr_idx:number) : dcl_entry | undefined {
+//     if (curr_idx < 0) return undefined;
+//     const found = comp_env[curr_idx].entries.find(dcl => dcl.name === name);
+//     if (found) return found;
+//     return get_var(name, comp_env[curr_idx].prev_frame);
+// }
 
-function get_type_info(type_spec: string): ty {
-    // check if type exists
-    if (types[type_spec] !== undefined) {
-        return types[type_spec];
-    } else {
-        throw Error("Undefined type: " + type_spec);
-    }   
-}
-
-// comp_env: compile env (an array of frames that each contain dcls/params mappings)
-let frame_idx = 0;
-let comp_env: frame[] = [];
-comp_env[frame_idx] = { next_frame: -1, prev_frame: -1, entries: [] }
-
-function get_var(name:string, curr_idx:number) : dcl_entry | undefined {
-    if (curr_idx < 0) return undefined;
-    const found = comp_env[curr_idx].entries.find(dcl => dcl.name === name);
-    if (found) return found;
-    return get_var(name, comp_env[curr_idx].prev_frame);
-}
-
-function is_repeated_dcl(name: string) : boolean {
-    return get_var(name, frame_idx) !== undefined;
-}
+// function is_repeated_dcl(name: string) : boolean {
+//     return get_var(name, frame_idx) !== undefined;
+// }
 
 
 // wc: write counter
@@ -149,6 +121,7 @@ function binop_instrs(root: any) {
 function compile_dcls(root: any) {
     // declaration: declarationSpecifiers initDeclaratorList? ';'
     const type_info = compile_dcl_spec(root.children[0]);
+    
     if (type_info === undefined) return;
     // if (root.initDeclaratorList() !== undefined) {
     const value = compile_dcls_lst(root.children[1], type_info);
@@ -175,25 +148,18 @@ function compile_dcl_spec(root: any) : ty | undefined {
         }
     } else {
         if (root.childCount === 1) {
-            return get_type_info(get_text(root.children[0].typeSpecifier()));
+            return types[get_text(root.children[0].typeSpecifier())];
         }
 
         const declaration = get_text(root).split(" ");
         const name = declaration.pop();
-        if (name === undefined) throw Error("This should not happen but name is undefined.")
+        if (name === undefined) throw Error("This should not happen but name is undefined.");
         
         const type_spec = declaration.join(" ");
-        
-        declare_var(name, get_type_info(type_spec))
+        let type = types[type_spec]
+        if (type === undefined) throw Error("This should not happen but type is undefined.");
+        push_instr(...compile_dcl(name, type)); // TODO: HERE
     }
-}
-
-function declare_var(name:string, type:ty) {
-    if (is_repeated_dcl(name)) throw Error("Repeated declaration of variable " + name);
-    comp_env[frame_idx].entries.push({
-        name,
-        type
-    })
 }
 
 function get_text(root:any) : string {
@@ -205,6 +171,7 @@ function get_text(root:any) : string {
     return s.join(" ")
 }
 
+
 function compile_dcls_lst(root: any, type_info: ty) {
     // initDeclaratorList: initDeclarator (',' initDeclarator)*
     // initDeclarator: declarator ('=' initializer)?
@@ -215,17 +182,16 @@ function compile_dcls_lst(root: any, type_info: ty) {
     // |   directDeclarator '[' DigitSequence? ']'
     // |   directDeclarator '(' parameterList ')'
     // |   directDeclarator '(' identifierList? ')'
-    for (let i = 0; i < root.childCount; i += 2) {
-        const c = root.children[i]; // initDeclarator
-        let new_ent: dcl_entry;
-        declare_var(get_text(c.children[0]), type_info)
-
-        // if (c.childCount <= 1) {
-        //     // declarator -> reserve space for default value
-        // } else {
-        //     // declarator = initializer -> reserve space and compile instr for value
-
-        // }
+    for (let i = 0; i < root.childCount; i += 2) {  // for each initDeclarator
+        const c = root.children[i];
+        const declarator = c.children[0]; // TODO: pointers, arrays, function calls
+        push_instr(...compile_dcl(get_text(declarator), type_info));
+        if (c.childCount > 1) {
+            // there is an initializer
+            compile(c.children[2]);
+            push_instr(...compile_assign(get_text(declarator)))
+        }
+        // no initializer
     }
 }
 
@@ -240,10 +206,14 @@ primaryExpression:
             push_instr({operation: OP.PUSH, operands: [imm(BigInt(root.Constant().symbol.text))]});
         } else if (root.Identifier() !== undefined) {
             // console.log("IDENTIFIER: " + root.Identifier().symbol.text)
-            // TODO: either just give position of args in comp_env or give the actual val?
-            // TODO: check type of val before pushing
-            // let val = comp_env[frame_idx].get(root.Identifier().symbol.text)
-            // push_instr({operation: OP.PUSH, operands: [imm(BigInt(val))]});
+            const id = root.Identifier().symbol.text
+            const ty = get_variable(id)?.ty
+            if (ty === undefined) throw Error("Variable not defined");
+            const opr = get_variable_operand(id)
+            push_instr(
+                {operation: OP.MOV, operands: [imm(8), R0, imm(get_ty_size(ty)), opr]},
+                {operation: OP.PUSH, operands: [R0]}
+            )
         } else if (root.expression() !== undefined) {
             // console.log("EXPRESSION: " + get_rule_name(root.children[1]))
             compile(root.children[1]);
@@ -372,18 +342,26 @@ initializer:
     (root: any) => {
         // assignmentExpression
         // |   '{' initializerList ','? '}'
-        compile(root.children[0])
+        compile(root.children[0]) // TODO: Handle struct declaration
     },
 assignmentExpression:
     (root: any) => {
-        // conditionalExpression | unaryExpression assignmentOperator assignmentExpression | DigitSequence // for
+        // conditionalExpression | Identifier assignmentOperator assignmentExpression | DigitSequence // for
         // compile(root.children[0])
         if (root.childCount >= 2) {
-            // unaryExpression assignmentOperator assignmentExpression
-            // compile(root.children[0]);
-            // compile(root.children[2]);
+            if (get_text(root.children[1]) !== "=") throw Error ("assignment op not supported yet. TODO")
+            // Identifier assignmentOperator assignmentExpression
+            const lhs = get_variable(get_text(root.children[0]));
+            if (lhs === undefined) throw Error("variable not defined");
+            compile(root.children[2]);
+            push_instr(
+                {operation: OP.POP, operands: [R0]},
+                {operation: OP.MOV, operands: [imm(get_ty_size(lhs.ty)), ind(BP, imm(-lhs.offset)), imm(8), R0]},
+                {operation: OP.PUSH, operands: [R0]},
+            )
         } else {
             // conditionalExpression | DigitSequence
+            if (!is_rule(root.children[0])) throw Error("Expanded to DigitSequence")
             compile(root.children[0])
         }
     },

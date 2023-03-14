@@ -23,10 +23,6 @@ const binop = (op : OP, o1 : number | string, o2: number | string) => [
     {operation: OP.PUSH, operands:[R0]}
 ]
 
-const memcpy = (dst:ind, src:ind, size: number) => {
-    
-}
-
 /**
  * {
  *      char init = 11;
