@@ -60,11 +60,11 @@ function insert_type(ty : ty) {
     else throw Error ("invalid type")
 }
 
-function get_ty_size(ty : ty) : number {
-    if ("size" in ty) return ty.size
+export function get_ty_size(ty : ty) : number {
+    if ("size" in ty) return ty.size;
     if (ty.typename === "arr") {
         if (ty.n_elems === undefined) return 8;
-        else return get_ty_size(ty.ty) * ty.n_elems
+        else return get_ty_size(ty.ty) * ty.n_elems, 8
     }
     if (ty.typename === "struct") {
         return ty.fields.map(get_ty_size).reduce((a,b)=>a+b, 0)
