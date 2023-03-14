@@ -41,13 +41,15 @@ export type ind = {
     tag: "ind"
     reg: register
     displacement: imm
+    size: number
 }
 
-export function ind(reg: register, displacement : imm) : ind {
+export function ind(reg: register, displacement : imm, size: number = 8) : ind {
     return {
         tag: "ind",
         reg: reg,
         displacement: displacement,
+        size,
     }
 }
 
