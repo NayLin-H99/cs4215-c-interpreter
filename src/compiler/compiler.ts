@@ -9,9 +9,11 @@ import { CParser, ExternalDeclarationContext } from '../parser/CParser'
 import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/datastructures'
 import { instruction_to_string } from "../vm/vm"
 
-import { primitives, arr, struct, namedT, ty, int, char, get_type_name, get_ty_size, types } from './typesystem'
+import { get_ty_size } from './typesystem'
 
-import { env, reset_memory_env, compile_dcl, compile_assign, get_variable, get_ty_info, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
+import { env, reset_memory_env, get_variable, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
+
+import { compile_declaration } from './dcl'
 
 const file_path: string = './test/test_files/expression.c';
 // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
@@ -40,28 +42,27 @@ export default function parse_and_compile(input:string) {
 
 const get_rule_name = (ctx:any) => CParser.ruleNames[ctx.ruleIndex]
 
-const is_rule = (node:any) => get_rule_name(node) !== undefined
+export const is_rule = (node:any) => get_rule_name(node) !== undefined
 
 const print_tree = (root : any, depth : number) => {
     if (!root) return;
     if (is_rule(root)) {
-        if (get_rule_name(root) === "additiveExpression") {
-            console.log("ADD EXPRESSION");
-            console.log(root.childCount)
-            // console.log("CHILD 0")
-            // console.log(get_rule_name(root.children[0]))
-            // console.log("CHILD 1")
-            // console.log(root.children[1].symbol.text)
-            // console.log("CHILD 2")
-            // console.log(get_rule_name(root.children[2]))
-        }
-        // console.log("-".repeat(depth * 2) + "RULE: " + get_rule_name(root))
+        console.log("-".repeat(depth * 2) + "RULE: " + get_rule_name(root))
         const rule = get_rule_name(root)
     } else {
-        // console.log("-".repeat(depth * 2) + "TEXT: " + root.symbol.text)
+        console.log("-".repeat(depth * 2) + "TEXT: " + root.symbol.text)
     }
     if (root.children)
         root.children.forEach((c:any) => print_tree(c, depth + 1))
+}
+
+export function get_text(root:any) : string {
+    if(!is_rule(root)) return root.symbol.text;
+    let s = []
+    for (let i=0; i<root.childCount; i++) {
+        s.push(get_text(root.children[i]))
+    }
+    return s.join(" ")
 }
 
 /**
@@ -69,21 +70,6 @@ const print_tree = (root : any, depth : number) => {
  */
 type compile_fn_ty = (root: any) => void;
 type comp_map = Record<string, compile_fn_ty>;
-// let frame_idx = 0;
-// let comp_env: frame[] = [];
-// comp_env[frame_idx] = { next_frame: -1, prev_frame: -1, entries: [] }
-
-// function get_var(name:string, curr_idx:number) : dcl_entry | undefined {
-//     if (curr_idx < 0) return undefined;
-//     const found = comp_env[curr_idx].entries.find(dcl => dcl.name === name);
-//     if (found) return found;
-//     return get_var(name, comp_env[curr_idx].prev_frame);
-// }
-
-// function is_repeated_dcl(name: string) : boolean {
-//     return get_var(name, frame_idx) !== undefined;
-// }
-
 
 // wc: write counter
 let wc = 0;
@@ -114,84 +100,6 @@ function binop_instrs(root: any) {
                 {operation: OP.PUSH, operands: [R0]}
             );
         }
-    }
-}
-
-// helper function for declarations
-function compile_dcls(root: any) {
-    // declaration: declarationSpecifiers initDeclaratorList? ';'
-    const type_info = compile_dcl_spec(root.children[0]);
-    
-    if (type_info === undefined) return;
-    // if (root.initDeclaratorList() !== undefined) {
-    const value = compile_dcls_lst(root.children[1], type_info);
-    // }
-}
-
-function compile_dcl_spec(root: any) : ty | undefined {
-    // declarationSpecifiers: declarationSpecifier+
-    // declarationSpecifier: storageClassSpecifier | typeSpecifier
-    if (root.children[0].storageClassSpecifier() !== undefined) {
-        // "typedef <type_spec> <name>"
-        throw Error("struct / typedef not implemented")
-        const type_spec = get_text(root).split(' ').slice(1);
-        const new_type_name = type_spec.pop();
-        if (type_spec[0] === "struct") {
-            // const new_type : struct = {
-            //     typename: "struct",
-            //     structname: new_type_name,
-            //     fields, 
-            //     fieldnames
-            // }
-        } else {
-            // const new_type : namedT
-        }
-    } else {
-        if (root.childCount === 1) {
-            return types[get_text(root.children[0].typeSpecifier())];
-        }
-
-        const declaration = get_text(root).split(" ");
-        const name = declaration.pop();
-        if (name === undefined) throw Error("This should not happen but name is undefined.");
-        
-        const type_spec = declaration.join(" ");
-        let type = types[type_spec]
-        if (type === undefined) throw Error("This should not happen but type is undefined.");
-        push_instr(...compile_dcl(name, type)); // TODO: HERE
-    }
-}
-
-export function get_text(root:any) : string {
-    if(!is_rule(root)) return root.symbol.text;
-    let s = []
-    for (let i=0; i<root.childCount; i++) {
-        s.push(get_text(root.children[i]))
-    }
-    return s.join(" ")
-}
-
-
-function compile_dcls_lst(root: any, type_info: ty) {
-    // initDeclaratorList: initDeclarator (',' initDeclarator)*
-    // initDeclarator: declarator ('=' initializer)?
-    // declarator: pointer? directDeclarator
-    // directDeclarator: Identifier
-    // |   '(' declarator ')'
-    // |   directDeclarator '[' constantExpression? ']'
-    // |   directDeclarator '[' DigitSequence? ']'
-    // |   directDeclarator '(' parameterList ')'
-    // |   directDeclarator '(' identifierList? ')'
-    for (let i = 0; i < root.childCount; i += 2) {  // for each initDeclarator
-        const c = root.children[i];
-        const declarator = c.children[0]; // TODO: pointers, arrays, function calls
-        push_instr(...compile_dcl(get_text(declarator), type_info));
-        if (c.childCount > 1) {
-            // there is an initializer
-            compile(c.children[2]);
-            push_instr(...compile_assign(get_text(declarator)))
-        }
-        // no initializer
     }
 }
 
@@ -290,59 +198,7 @@ externalDeclaration:
 declaration:
     (root: any) => {
         // declarationSpecifiers initDeclaratorList? ';'
-        compile_dcls(root)
-    },
-// declarationSpecifiers:
-//     (root: any) => {
-//         // for (let i=0; i<root.childCount; i++) {
-//         //     compile(root.children[i])
-//         // }
-//     },
-// initDeclaratorList:
-//     (root: any) => {
-//         // initDeclarator (',' initDeclarator)*
-//         if (root.childCount >= 2) {
-//             // more than one dcl
-//             for (let i = 0; i < root.childCount; i += 2) {
-//                 compile(root.children[i]);
-//             }
-//         } else {
-//             compile(root.children[0]);
-//         }
-//     },
-// initDeclarator:
-//     (root: any) => {
-//         // declarator ('=' initializer)?
-//         compile(root.children[0]);  // declarator
-//         compile(root.children[2]);  // initializer
-//     },
-// declarator:
-//     (root: any) => {
-//         // pointer? directDeclarator
-//         // TODO: Support pointer
-//         compile(root.children[0]);  // assuming only directDeclarator
-//     },
-// directDeclarator:
-//     (root: any) => { 
-//         // Identifier | '(' declarator ')' | directDeclarator '[' DigitSequence? ']' 
-//         // | directDeclarator '(' parameterList ')'s | directDeclarator '(' identifierList? ')'
-//         if (root.childCount >= 2) {
-//             //    '(' declarator ')'
-//             //     directDeclarator '[' constantExpression? ']'
-//             //     directDeclarator '[' DigitSequence? ']'
-//             //     directDeclarator '(' parameterList ')'s
-//             //     directDeclarator '(' identifierList? ')'
-//         } else {
-//             //     Identifier
-//             compile(root.children[0]);
-//         }
-
-//     },
-initializer:
-    (root: any) => {
-        // assignmentExpression
-        // |   '{' initializerList ','? '}'
-        compile(root.children[0]) // TODO: Handle struct declaration
+        compile_declaration(root)
     },
 assignmentExpression:
     (root: any) => {
