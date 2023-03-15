@@ -371,7 +371,7 @@ jumpStatement
     ;
 
 compilationUnit
-    :   externalDeclaration+ EOF
+    :   (statement | externalDeclaration)+ EOF
     ;
 
 externalDeclaration

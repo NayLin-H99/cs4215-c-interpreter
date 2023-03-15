@@ -3,7 +3,8 @@ export type primitives = {typename: "int" | "char" | "tvoid" | "short" | "float"
 export type arr = {typename: "arr", ty: ty, n_elems: number | undefined};
 export type struct = {typename: "struct", structname: string, fields: ty[], fieldnames: string[]};
 export type namedT = {typename: "typedef", src: string, dst: string};
-export type ty = primitives | struct | arr | namedT;
+export type ptr = {typename: "pointer", type: ty};
+export type ty = primitives | struct | arr | namedT | ptr;
 
 export const 
     int   : primitives = {typename: "int", size: 8},
@@ -20,6 +21,7 @@ export function get_type_name (ty: ty) : string {
             ty.typename === "tvoid" ? ty.typename :
             ty.typename === "arr" ?  ty.typename + "_" + get_type_name(ty.ty) :
             ty.typename === "struct" ? ty.typename + "_" + ty.structname : 
+            ty.typename === "pointer" ? ty.typename + "_" + get_type_name(ty.type) :
             ty.typename === "typedef" ? ty.dst : "should not happen"
 }
 

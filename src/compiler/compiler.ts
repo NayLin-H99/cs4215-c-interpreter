@@ -162,7 +162,7 @@ function compile_dcl_spec(root: any) : ty | undefined {
     }
 }
 
-function get_text(root:any) : string {
+export function get_text(root:any) : string {
     if(!is_rule(root)) return root.symbol.text;
     let s = []
     for (let i=0; i<root.childCount; i++) {
