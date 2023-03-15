@@ -6,6 +6,8 @@ export type namedT = {typename: "typedef", src: string, dst: string};
 export type ptr = {typename: "pointer", type: ty};
 export type ty = primitives | struct | arr | namedT | ptr;
 
+export const ptr = (ty:ty) : ptr => ({typename: "pointer", type: ty})
+
 export const 
     int   : primitives = {typename: "int", size: 8},
     short : primitives = {typename: "short", size: 2},
@@ -35,6 +37,7 @@ export function insert_type(ty : ty) {
 
 export function get_ty_size(ty : ty) : number {
     if ("size" in ty) return ty.size;
+    if (ty.typename === "pointer") return 8;
     if (ty.typename === "arr") {
         if (ty.n_elems === undefined) return 8;
         else return get_ty_size(ty.ty) * ty.n_elems, 8
