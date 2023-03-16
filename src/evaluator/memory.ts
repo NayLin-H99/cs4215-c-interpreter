@@ -18,6 +18,10 @@ type rvalue = {
     tag: "rvalue",
     value: number // just numbers, can be address when used as *rvalue.value
 }
+export const
+    lvalue = (value:number) : lvalue => ({tag:"lvalue", value}),
+    rvalue = (value:number) : rvalue => ({tag:"rvalue", value})
+
 
 export type operand = lvalue | rvalue
 
@@ -31,8 +35,13 @@ export function init_memory() {
     free = 0
     OS = []
     HEAP = new ArrayBuffer(HEAP_SIZE)
+    addr_ctxt = {}
+    var_ctxt = {}
+    env = [[]]
 }
 
+// correctness at byte level can only be guaranteed for 32 bits
+// due to difference in numerical representations between C and JS number
 export function read_word(address : number) {
     return HEAP_VIEW.getFloat64(address, LITTLE_ENDIAN)
 }
@@ -81,6 +90,12 @@ export function get_var_addr(name:string) {
     return var_ctxt[name].address
 }
 
+export function get_var_value(name:string) {
+    const addr = var_ctxt[name].address
+    // TODO: add return value depending on type info
+    return read_word(addr)
+}
+
 export function assign_variable(var_op:operand, val_opr: operand) {
     const address = var_op.value;
     const value : number = 
@@ -108,10 +123,10 @@ export function deref(opr: operand) : lvalue {
     }
 }
 
-function enter_block() {
+export function enter_block() {
     env.push([])
 }
-function exit_block() {
+export function exit_block() {
     env.pop()?.forEach(v => {
         delete addr_ctxt[v.address]
         delete var_ctxt[v.name]
