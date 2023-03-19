@@ -12,6 +12,8 @@ const decl_int_var_with_value = (name:string, value:number) => [
 ]
 
 
+
+
 /**
  * int i = 10;
  * int a = 0;
@@ -43,7 +45,7 @@ test_vm(postfix_increment, 10)
  *  a = 12;
  * }
  * int b = 11;
- * a + b;
+ * a - b;
  */
 let var_blk_scope = [
     ...decl_int_var_with_value("a", 10),
@@ -57,10 +59,36 @@ let var_blk_scope = [
     ...decl_int_var_with_value("b", 11),
     {tag: "LDS", name: "a"},
     {tag: "LDS", name: "b"},
-    {tag: "BINOP", op: "+"},
-    {tag: "DONE", op: "+"}
+    {tag: "BINOP", op: "-"},
+    {tag: "DONE"}
 ]
-test_vm(var_blk_scope, 23)
+test_vm(var_blk_scope, 1)
+
+/**
+ * int a = 10;
+ * int b = 5;
+ * {
+ *   b = 1;
+ *  
+ * }
+    a+b;
+ */
+let var_blk_scope2 = [
+    ...decl_int_var_with_value("a", 10),
+    ...decl_int_var_with_value("b", 5),
+    {tag:"ENTER_BLK"},
+    {tag: "LDS", name: "b"},
+    {tag: "LDC", value: 1},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+    {tag:"EXIT_BLK"},
+    {tag: "LDS", name: "a"},
+    {tag: "LDS", name: "b"},
+    {tag: "BINOP", op: "+"},
+    {tag: "DONE"}
+]
+test_vm(var_blk_scope2, 11)
+
 
 let pointer_addressing = [
     // int v1 = 10;
@@ -78,22 +106,22 @@ let pointer_addressing = [
     // int *ap = &v1;
     {tag: "DECL", var: { name: "ap", ty: ptr(int) }},
     {tag: "LDS", name: "v1"},
-    {tag: "ADDR"},
+    {tag: "UNOP", op: "&"},
     {tag: "ASSIGN"},
     {tag: "POP"},
 
     // int **app = &ap;
     {tag: "DECL", var: { name: "app", ty: ptr(ptr(int)) }},
     {tag: "LDS", name: "ap"},
-    {tag: "ADDR"},
+    {tag: "UNOP", op: "&"},
     {tag: "ASSIGN"},
     {tag: "POP"},
 
     // int c = **app
     {tag: "DECL", var: { name: "c", ty: ptr(ptr(int)) }},
     {tag: "LDS", name: "app"},
-    {tag: "DEREF"},
-    {tag: "DEREF"},
+    {tag: "UNOP", op: "*"},
+    {tag: "UNOP", op: "*"},
     {tag: "ASSIGN"},
     {tag: "POP"},
 
@@ -101,13 +129,13 @@ let pointer_addressing = [
     // ap = &v2;
     {tag: "LDS", name: "ap"},
     {tag: "LDS", name: "v2"},
-    {tag: "ADDR"},
+    {tag: "UNOP", op: "&"},
     {tag: "ASSIGN"},
     {tag: "POP"},
 
     {tag: "LDS", name: "app"},
-    {tag: "DEREF"},
-    {tag: "DEREF"},
+    {tag: "UNOP", op: "*"},
+    {tag: "UNOP", op: "*"},
 
     {tag: "DONE"}
 ]
@@ -176,7 +204,8 @@ let sum_to_10 = [
     {tag:"LDS", name:"i"},
     {tag:"LDC", value: 10},
     {tag:"BINOP", op: "<"},
-    {tag: "BR", true_branch: 1, false_branch: 17},
+    {tag: "BR", true_branch: 1, false_branch: 18},
+    {tag: "POP"},
     {tag: "ENTER_BLK"},
     // sum += i
     {tag:"LDS", name:"sum"},
@@ -193,10 +222,81 @@ let sum_to_10 = [
     {tag:"BINOP", op: "+"},
     {tag:"ASSIGN"},
     {tag:"POP"},
-    {tag: "BR", jmp: -18},
+    {tag: "BR", jmp: -19},
     {tag: "EXIT_BLK"},
     
     {tag:"LDV", name:"sum"},
     {tag:"DONE"}
 ]
 test_vm(sum_to_10, 45)
+
+
+/**
+ * int *a = 0;
+ * a + 1;
+ */
+let pointer_arithmetic_1 = [
+    {tag: "DECL", var: { name:"a", ty: ptr(int) }},
+    {tag:"LDC", value: 8},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag: "LDS", name: "a"},
+    {tag:"LDC", value: 1},
+    {tag:"BINOP", op: "+"},
+    {tag: "DONE"}
+]
+test_vm(pointer_arithmetic_1, 16)
+
+/**
+ * int *a = 0;
+ * 1 + a;
+ */
+let pointer_arithmetic_1_mirror = [
+    {tag: "DECL", var: { name:"a", ty: ptr(int) }},
+    {tag:"LDC", value: 8},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag:"LDC", value: 1},
+    {tag: "LDS", name: "a"},
+    {tag:"BINOP", op: "+"},
+    {tag: "DONE"}
+]
+test_vm(pointer_arithmetic_1_mirror, 16)
+
+/**
+ * int *a = 8;
+ * a - 1;
+ */
+let pointer_arithmetic_2 = [
+    {tag: "DECL", var: { name:"a", ty: ptr(int) }},
+    {tag:"LDC", value: 8},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag: "LDS", name: "a"},
+    {tag:"LDC", value: 1},
+    {tag:"BINOP", op: "-"},
+    {tag: "DONE"}
+]
+test_vm(pointer_arithmetic_2, 0)
+
+
+/**
+ * int *a = 8;
+ * int *b = 16;
+ * b - a;
+ */
+let pointer_arithmetic_3 = [
+    {tag: "DECL", var: { name:"a", ty: ptr(int) }},
+    {tag:"LDC", value: 8},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag: "DECL", var: { name:"b", ty: ptr(int) }},
+    {tag:"LDC", value: 16},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag: "LDS", name: "b"},
+    {tag: "LDS", name: "a"},
+    {tag:"BINOP", op: "-"},
+    {tag: "DONE"}
+]
+test_vm(pointer_arithmetic_3, 1)

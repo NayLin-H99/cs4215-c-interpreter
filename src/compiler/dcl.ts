@@ -1,56 +1,67 @@
 import { get_text } from './compiler'
-import { ty, types, get_type_name } from './typesystem'
-import { compile_dcl, compile_assign } from './memory'
-import { handle_assignmentExpression } from './expr'
-import { instruction } from '../vm/datastructures';
+import { ty, types } from './typesystem'
+import { compile_expr } from './expr'
+import { DeclarationContext, ForDeclarationContext } from '../parser/CParser';
+
 
 
 // helper function for declarations
-export function compile_declaration(root: any): instruction[] {
+export function compile_declaration(root: DeclarationContext | ForDeclarationContext): any[] {
     // declaration: declarationSpecifiers initDeclaratorList? ';'
-    get_dcls(root);
+
+    let instrs : any[] = [];
+
+    let typedecl = handle_declarationSpecifiers(root.declarationSpecifiers());
+    if (root.initDeclaratorList && root.initDeclaratorList()) {
+        let results = handle_initDeclaratorList(root.initDeclaratorList(), typedecl .type)
+        for (let result of results) {
+            const {varname, type} = result;
+            const init = result.instrs;
+            instrs = [
+                ...instrs,
+                {tag:"DECL", var: { name: varname, ty: type }},
+                ...(init ? init : []),
+                {tag: "ASSIGN"},
+                {tag: "POP"},
+            ]
+        }
+    } else {
+        // weird champ case of no initializer or multiple decls
+        instrs = [
+            {tag:"DECL", var: { name: typedecl.varname, ty: typedecl.type }},
+        ]
+    }
+    
+
     return instrs;
 }
 
-let instrs: instruction[] = [];
-// Use to this to support signedness i.e. 'unsigned' and 'int' are at the same depth from declarationSpecifiers
-// type comp_type = {
-//     type: ty | undefined,
-//     depth: number
-// };
-// let type: comp_type = {type: undefined, depth: -1};
-let curr_type: ty | undefined = undefined;
 
-function reset_dcl_env() {
-    curr_type = undefined;
-    instrs = [];
-}
-
-function get_dcls(root: any) {
-    reset_dcl_env();
-    // Note that a variable can be hidden under `typedefName` e.g. `int a;`, 
-    // otherwise the name would be under `directDeclarator` e.g. `int a, b;`
-    return handle_declaration(root);
-}
-
-function handle_declaration(root: any) {
-    // declaration: declarationSpecifiers initDeclaratorList? ';'
-    handle_declarationSpecifiers(root.children[0]);
-    if (root.childCount > 1) {
-        handle_initDeclaratorList(root.children[1]);
-    }
-}
 
 
 /********************************* TYPES **************************************/
-function handle_declarationSpecifiers(root: any) {
+function handle_declarationSpecifiers(root: any) : any {
     // declarationSpecifiers: declarationSpecifier+
+
+    let varname = undefined;
+    let type = undefined;
+
     for (let i = 0; i < root.childCount; i++) {
-        handle_declarationSpecifier(root.children[i]);
+        const result = handle_declarationSpecifier(root.children[i]);
+        if (typeof result === "string") {
+            varname = result;
+        } else {
+            type = result;
+        }
+    }
+
+    return {
+        varname,
+        type
     }
 }
 
-function handle_declarationSpecifier(root: any) {
+function handle_declarationSpecifier(root: any) : string | ty {
     // declarationSpecifier: storageClassSpecifier | typeSpecifier
     if (root.storageClassSpecifier()) {
         return handle_storageClassSpecifier(root.children[0]);
@@ -59,12 +70,12 @@ function handle_declarationSpecifier(root: any) {
     }
 }
 
-function handle_storageClassSpecifier(root: any) {
+function handle_storageClassSpecifier(root: any) : string | ty {
     // storageClassSpecifier: 'typedef';
     throw Error("typedef is not supported");
 }
 
-function handle_typeSpecifier(root: any) {
+function handle_typeSpecifier(root: any) : string | ty {
     // typeSpecifier: ('void' | 'char' | 'short' | 'int' | 'long' | 'float' | 'double' | 'signed' | 'unsigned' 
     // | structOrUnionSpecifier | enumSpecifier | typedefName);
     if (root.structOrUnionSpecifier()) {
@@ -72,101 +83,96 @@ function handle_typeSpecifier(root: any) {
     } else if (root.enumSpecifier()) {
         throw Error("Enum is not supported")
     } else if (root.typedefName()) {
-        if (curr_type) {
-            // meaning type has already been defined, then this is a dcl without a value e.g. `int a;`
-            instrs.push(...compile_dcl(get_text(root), curr_type))
-        } else {
-            throw Error("typedefName is not supported");
-        }
+        return get_text(root.typedefName());
     } else {
-        handle_type_words(root.children[0]);
+        return handle_type_words(root.children[0]);
     }
 }
 
-function handle_type_words(root: any) {
+function handle_type_words(root: any) : ty {
     const typestr = get_text(root)
-    switch (typestr) {
-        case 'char':
-            curr_type = types.char;
-            break;
-        case 'short':
-            curr_type = types.short;
-            break;
-        case 'int':
-            curr_type = types.int;
-            break;
-        case 'void':
-            curr_type = types.tvoid;
-            break;
-        case 'float':
-            curr_type = types.float;
-            break;
-        case 'double':
-            curr_type = types.double;
-            break;
-        default:
-            // 'long' or 'signed' or 'unsigned'
-            throw Error("Type word" + typestr + " not supported.");
-    }
+    if (types[typestr] === undefined) throw Error("Using undefined type: "+ typestr)
+    return types[typestr];
 }
 
 /******************************** DCL LST *************************************/
-function handle_initDeclaratorList(root: any) {
+function handle_initDeclaratorList(root: any, type: any) {
     // initDeclaratorList : initDeclarator (',' initDeclarator)*
+
+    let results = [];
     for (let i = 0; i < root.childCount; i += 2) {
-        handle_initDeclaratorList(root.children[i]);
+        results.push(handle_initDeclarator(root.children[i], type));
+        
     }
+    return results
 }
 
-function handle_initDeclarator(root: any) {
+function handle_initDeclarator(root: any, type: any) {
     // initDeclarator : declarator ('=' initializer)?
-    handle_declarator(root);
+    const result = handle_declarator(root.declarator(), type);
+    
     if (root.childCount > 1) {
-        handle_initializer(root);
+        result.instrs = handle_initializer(root.initializer());
     } else {
         // no RHS?
     }
+
+    return result
 }
 
-function handle_declarator(root: any) {
+function handle_declarator(root: any, type: any) {
     // declarator : pointer? directDeclarator
-    if (root.childCount > 1) {
-        if (!curr_type) throw Error ("Pointer of unknown type"); // Should not happen but JIC
-        curr_type = {typename: "pointer", type: curr_type}
-        handle_directDeclarator(root.children[1]);
+
+    let result = undefined;
+
+    if (root.pointer()) {
+        
+
+        // apply pointer *
+        for(let i=0; i<root.pointer().childCount; i++) {
+            type = {typename: "pointer", type: type}
+        }
+
+        result = handle_directDeclarator(root.children[1], type);
+        
     } else {
-        handle_directDeclarator(root.children[0]);
+        result = handle_directDeclarator(root.children[0], type);
     }
+
+    return result
 }
 
-function handle_directDeclarator(root: any) {
+function handle_directDeclarator(root: any, type: any) : any {
     // directDeclarator : Identifier 
     // | '(' declarator ')' 
     // | directDeclarator '[' constantExpression? ']' 
     // | directDeclarator '[' DigitSequence? ']'
     // | directDeclarator '(' parameterList ')'
     // | directDeclarator '(' identifierList? ')'
-    if (root.Identifier()) {
-        if (!curr_type) throw Error("Type still not defined at declarator"); // Should not happen but JIC
-        instrs.push(...compile_dcl(get_text(root), curr_type))
-    } else if (root.childCount === 3) {
-        handle_declarator(root.children[1]);
-    } else if (get_text(root.children[1]) === '[') {
-        throw Error("Arrays are not supported");
-    } else {
-        // TODO: function calls
-        throw Error("Function Calls on LHS are not supported");
+    if (root.Identifier && root.Identifier()) {
+        const varname = get_text(root.Identifier())
+        return {
+            type,
+            varname
+        }
+    } else if (root.declarator && root.declarator()) {
+        return handle_declarator(root.declarator(), type)
+    } else if (root.directDeclarator && get_text(root.children[1]) === '[') {        
+        throw Error("array not supported")
+    } else if (root.directDeclarator && get_text(root.children[1]) === '(') {        
+        throw Error("function not supported")
     }
+    throw Error("not implemented")
 }
 
 
 /********************************** RHS ***************************************/
 function handle_initializer(root: any) {
     // initializer : assignmentExpression | '{' initializerList ','? '}'
-    if (root.assignmentExpression()) {
+    if (root.assignmentExpression) {
         // assignmentExpression should be handled by expr handler
         // TODO: HANDLE ASSIGNMENTEXPRESSION
-        instrs.push(...handle_assignmentExpression(get_text(root)));
+        return compile_expr(root.assignmentExpression())
     } else {
         handle_initializerList(root);    
     }
@@ -176,5 +182,6 @@ function handle_initializerList(root: any) {
     // initializerList : designation? initializer (',' designation? initializer)*
     throw Error("Struct/Array not supported");
 }
+
 
 

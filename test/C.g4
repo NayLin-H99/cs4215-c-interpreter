@@ -117,8 +117,7 @@ conditionalExpression
 
 assignmentExpression
     :   conditionalExpression
-    // |   unaryExpression assignmentOperator assignmentExpression
-    |   Identifier assignmentOperator assignmentExpression
+    |   unaryExpression assignmentOperator assignmentExpression
     |   DigitSequence // for
     ;
 

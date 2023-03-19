@@ -1,8 +1,6 @@
 import {get_ty_size, tvoid, ty, ptr} from "../compiler/typesystem"
 
 // MEMORY MODEL
-
-
 const HEAP_SIZE = 1000000 * 8
 
 const LITTLE_ENDIAN = true;
@@ -13,17 +11,28 @@ const HEAP_VIEW = new DataView(HEAP)
 type lvalue = {
     tag: "lvalue",
     value: number, // address to the designated object
+    ty: ty,
 }
 type rvalue = {
     tag: "rvalue",
     value: number // just numbers, can be address when used as *rvalue.value
+    ty: ty,
 }
 export const
-    lvalue = (value:number) : lvalue => ({tag:"lvalue", value}),
-    rvalue = (value:number) : rvalue => ({tag:"rvalue", value})
+    lvalue = (value:number, ty: ty) : lvalue => ({tag:"lvalue", value, ty}),
+    rvalue = (value:number, ty: ty) : rvalue => ({tag:"rvalue", value, ty})
 
 
 export type operand = lvalue | rvalue
+
+
+type fdecl = {
+    rty: ty,
+    params: string[]
+    param_ty: ty[]
+    addr: number // PC value
+}
+type fctx = Record<string, fdecl>
 
 
 // void *free
@@ -96,6 +105,10 @@ export function get_var_value(name:string) {
     return read_word(addr)
 }
 
+export function get_var(name:string) {
+    return var_ctxt[name]
+}
+
 export function assign_variable(var_op:operand, val_opr: operand) {
     const address = var_op.value;
     const value : number = 
@@ -106,21 +119,20 @@ export function assign_variable(var_op:operand, val_opr: operand) {
 
 // address of operand : &
 export function address_of(opr: lvalue) : rvalue {
-    return {
-        tag: "rvalue",
-        value: opr.value
-    }
+    return rvalue(opr.value, ptr(opr.ty));
 }
 
 // indirection : *
 export function deref(opr: operand) : lvalue {
     // assume rvalue is a valid ptr, if not UB
+    if (opr.ty.typename !== "pointer" && opr.tag === "rvalue") throw Error("Can only deref pointers");
+
     let value : number = 
         opr.tag === "lvalue" ? read_word(opr.value) : opr.value
-    return {
-        tag: "lvalue",
-        value: value
-    }
+
+    const ty = opr.ty.typename === "pointer" ? opr.ty.type : opr.ty
+    
+    return lvalue(value, ty)
 }
 
 export function enter_block() {

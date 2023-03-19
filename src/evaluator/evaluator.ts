@@ -1,4 +1,11 @@
-import { enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value } from "./memory"
+import { get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value } from "./memory"
+import { int, ty, get_ty_size } from "../compiler/typesystem"
+
+
+// the only truth
+const is_true = (n : number) => n > 0
+
+const is_ptr = (ty : ty) => ty.typename === "pointer"
 
 const apply_binop : Record<string, Function> = {
     // ================= ARITHMETIC =================
@@ -7,6 +14,13 @@ const apply_binop : Record<string, Function> = {
     "/" : (o1:operand, o2:operand) => opr_to_value(o1) / opr_to_value(o2),
     "-" : (o1:operand, o2:operand) => opr_to_value(o1) - opr_to_value(o2),
     "%" : (o1:operand, o2:operand) => opr_to_value(o1) % opr_to_value(o2),
+    // ================= BITWISE =================
+    ">>" : (o1:operand, o2:operand) => opr_to_value(o1) >> opr_to_value(o2),
+    "<<" : (o1:operand, o2:operand) => opr_to_value(o1) << opr_to_value(o2),
+    "&" : (o1:operand, o2:operand) => opr_to_value(o1) & opr_to_value(o2),
+    "|" : (o1:operand, o2:operand) => opr_to_value(o1) | opr_to_value(o2),
+    "^" : (o1:operand, o2:operand) => opr_to_value(o1) ^ opr_to_value(o2),
+
     // ================= LOGIC =================
     "==" : (o1:operand, o2:operand) => opr_to_value(o1) == opr_to_value(o2) ? 1 : 0,
     "!=" : (o1:operand, o2:operand) => opr_to_value(o1) != opr_to_value(o2) ? 1 : 0,
@@ -14,6 +28,20 @@ const apply_binop : Record<string, Function> = {
     ">=" : (o1:operand, o2:operand) => opr_to_value(o1) >= opr_to_value(o2) ? 1 : 0,
     "<" : (o1:operand, o2:operand) => opr_to_value(o1) < opr_to_value(o2) ? 1 : 0,
     "<=" : (o1:operand, o2:operand) => opr_to_value(o1) <= opr_to_value(o2) ? 1 : 0,
+    "&&" : (o1:operand, o2:operand) => is_true(opr_to_value(o1)) && is_true(opr_to_value(o2)) ? 1 : 0,
+    "||" : (o1:operand, o2:operand) => is_true(opr_to_value(o1)) || is_true(opr_to_value(o2)) ? 1 : 0,
+}
+
+const apply_unop : Record<string, Function> = { 
+    "&" : (o1: operand) => {
+        if (o1?.tag !== "lvalue") throw Error("trying to access address of rvalue")
+        return address_of(o1)
+    },
+    "*" : deref,
+    "!" : (o1: operand) => rvalue(!is_true(opr_to_value(o1)) ? 1 : 0, o1.ty),
+    "~" : (o1: operand) => rvalue(~opr_to_value(o1), o1.ty),
+    "-" : (o1: operand) => rvalue(opr_to_value(o1) * -1, o1.ty),
+    "+" : (o1: operand) => rvalue(opr_to_value(o1), o1.ty),
 }
 
 const pop = (stack:operand[]) : operand =>  {
@@ -29,10 +57,11 @@ const microcode : Record<string, Function> =  {
     // }),
     POP : (instr:any) => OS.pop(),
     LDC : (instr:any) => {
-        OS.push(rvalue(instr.value))
+        OS.push(rvalue(instr.value, int))
     },
     LDS : (instr:any) => {
-        OS.push(lvalue(get_var_addr(instr.name)))
+        const v = get_var(instr.name)
+        OS.push(lvalue(v.address, v.ty))
     },
 
     // load the value of a symbolic instead of symbol onto stack
@@ -40,13 +69,14 @@ const microcode : Record<string, Function> =  {
     // i++ => LDV i; LDS i; COPY; LDC 1; BINOP +; ASSIGN; POP;
     // if first LDV is LDS, then i will be incremented value rather than preincremented.
     LDV : (instr:any) => {
-        OS.push(rvalue(get_var_value(instr.name)))
+        const v = get_var(instr.name)
+        OS.push(rvalue(get_var_value(instr.name), v.ty))
     },
 
     DECL: (instr:any) => {
         const {name, ty} = instr.var;
         const addr = declare_variable(name, ty)
-        OS.push(lvalue(addr))
+        OS.push(lvalue(addr, ty))
     },
 
     ASSIGN: (instr:any) => {
@@ -70,12 +100,64 @@ const microcode : Record<string, Function> =  {
         // [ o2 ]
         // [ o1 ]
         // pop in reverse order for non-commutative ops
-        const o2 = pop(OS)
-        const o1= pop(OS)
+        let o2 = pop(OS)
+        let o1= pop(OS)
         const op = instr.op
+        if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
+            // POINTER ARITHMETICS
+
+            // Pointers can only add or minus
+            if (op !== "-" && op !== "+") throw Error("Invalid binop for pointers")
+
+            // If it's minus, first operand must be pointer
+            if (op === "-" && !is_ptr(o1.ty)) throw Error("Invalid type of operand 1, expected ptr")
+
+            
+            // Handle PLUS
+            if (op === "+" && !is_ptr(o2.ty) && o1.ty.typename === "pointer") {
+                const v = opr_to_value(o1) + opr_to_value(o2) * get_ty_size(o1.ty.type)
+                OS.push(rvalue(v, o1.ty))
+                return;
+            } else if (op === "+" && !is_ptr(o1.ty) && o2.ty.typename === "pointer") {
+                const v = opr_to_value(o2) + opr_to_value(o1) * get_ty_size(o2.ty.type)
+                OS.push(rvalue(v, o2.ty))
+                return;
+            } else if (op === "+") {
+                throw Error("Invalid binop : adding 2 pointers")
+            }
+
+            // Can assume first operand is a pointer
+            // If 2nd operand is a pointer, return diff
+            
+            if (op === "-" && is_ptr(o2.ty) ) {
+                const v1 = opr_to_value(o1);
+                const v2 = opr_to_value(o2);
+                // Improvement (typesafety) : check if o1 and o2 has same type
+                // just to make typescript happy so i can access type in o1
+                if (o1.ty.typename !== "pointer") throw Error("should not happen")
+                const size = get_ty_size(o1.ty.type)
+                OS.push(rvalue(Math.floor((v1-v2)/size), int))
+                return;
+            } else {
+                const size = get_ty_size(o1.ty)
+                const v = opr_to_value(o1) - opr_to_value(o2) * size
+                OS.push(rvalue(v, o1.ty))
+                return;
+            }
+        }
+
+        
         const result = apply_binop[op](o1, o2)
         // default to non-float operations.
-        OS.push(rvalue(instr.isFloat ? result : parseInt(result)))
+        // use o1 for typing for now. TODO: FIX THIS
+        OS.push(rvalue(instr.isFloat ? result : parseInt(result), o1.ty))
+    },
+
+    UNOP: (instr:any) => {
+        const o = pop(OS)
+        const op = instr.op
+        const result = apply_unop[op](o)
+        OS.push(result)
     },
 
     // Branches use relative addressing so REPL can work
@@ -92,23 +174,6 @@ const microcode : Record<string, Function> =  {
 
     ENTER_BLK: (instr:any) => enter_block(),
     EXIT_BLK: (instr:any) => exit_block(),
-
-    // pushes the address of stack top object
-    ADDR: (instr:any) => {
-        // if previous instruction was *, do nothing
-        // specification c11 6.5.3.2.3
-        const opr = pop(OS)
-        if (opr?.tag !== "lvalue") throw Error("trying to access address of rvalue")
-        OS.push(address_of(opr))
-    },
-    // pushes the value of what the current address points at
-    DEREF: (instr:any) => {
-        // if next instruction is & , do nothing
-        // specification c11 6.5.3.2.3
-        const opr = pop(OS)
-        OS.push(deref(opr))
-    },
-
     DONE: (instr:any) => {}
 }
 
