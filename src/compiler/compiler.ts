@@ -1,19 +1,17 @@
 import {
-    ANTLRErrorListener, CharStreams, CommonToken, 
-    CommonTokenStream, RecognitionException, Recognizer, 
-    Token
+    CharStreams,
+    CommonTokenStream
 } from "antlr4ts";
 import { CLexer } from '../parser/CLexer'
-import { CParser, ExternalDeclarationContext } from '../parser/CParser'
+import { CParser,  } from '../parser/CParser'
 
 import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/datastructures'
-import { instruction_to_string } from "../vm/vm"
 
 import { get_ty_size } from './typesystem'
 
 import { env, reset_memory_env, get_variable, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
 
-import { compile_declaration } from './dcl'
+import { compile_declaration } from './dcl2'
 
 const file_path: string = './test/test_files/expression.c';
 // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
@@ -40,7 +38,7 @@ export default function parse_and_compile(input:string) {
 }
 
 
-const get_rule_name = (ctx:any) => CParser.ruleNames[ctx.ruleIndex]
+export const get_rule_name = (ctx:any) => CParser.ruleNames[ctx.ruleIndex]
 
 export const is_rule = (node:any) => get_rule_name(node) !== undefined
 
@@ -198,7 +196,11 @@ externalDeclaration:
 declaration:
     (root: any) => {
         // declarationSpecifiers initDeclaratorList? ';'
-        compile_declaration(root)
+        const ins = compile_declaration(root)
+        instrs = [
+            ...instrs,
+            ...ins
+        ]
     },
 assignmentExpression:
     (root: any) => {
@@ -269,7 +271,7 @@ shiftExpression:
 }
 
 const compile = (root: any) => {
-    console.log(get_rule_name(root))
+    // console.log(get_rule_name(root))
     return compile_comp[get_rule_name(root)](root);
 } 
 

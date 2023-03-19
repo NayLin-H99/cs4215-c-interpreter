@@ -27,7 +27,7 @@ export function get_type_name (ty: ty) : string {
             ty.typename === "typedef" ? ty.dst : "should not happen"
 }
 
-export const types: Record<string, ty> = { int, short, float, double, char, tvoid }
+export const types: Record<string, ty> = { int, short, float, double, char, void:tvoid }
 
 export function insert_type(ty : ty) {
     const typename = get_type_name(ty)
