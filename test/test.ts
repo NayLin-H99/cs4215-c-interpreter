@@ -7,7 +7,7 @@ let basic_assignment = [
     {tag: "DONE"}
 ]
 
-test_vm(basic_assignment, 30);
+test_vm("basic_assignment", basic_assignment, 30);
 
 
 let basic_assignment_statement = [
@@ -15,14 +15,14 @@ let basic_assignment_statement = [
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(basic_assignment_statement, 30);
+test_vm("basic_assignment_statement", basic_assignment_statement, 30);
 
 let basic_unop_statement = [
     ...parse_and_compile("int a = 10; int *b = &a; *b = 20; "),
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(basic_unop_statement, 20);
+test_vm("basic_unop_statement", basic_unop_statement, 20);
 
 
 let basic_ptr_statement = [
@@ -30,35 +30,35 @@ let basic_ptr_statement = [
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(basic_ptr_statement, 21);
+test_vm("basic_ptr_statement", basic_ptr_statement, 21);
 
 let if_statement = [
     ...parse_and_compile("int a = 0; if (1 == 1) a = 2;"), 
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(if_statement, 2);
+test_vm("if_statement", if_statement, 2);
 
 let if_else_statement = [
     ...parse_and_compile("int a = 0; if (1 != 1) a = 2; else a = 69;"), 
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(if_else_statement, 69);
+test_vm("if_else_statement", if_else_statement, 69);
 
 let while_statement = [
     ...parse_and_compile("int a = 0; while (a < 5) a += 1;"), 
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(while_statement, 5)
+test_vm("while_statement", while_statement, 5)
 
 let for_statement = [
     ...parse_and_compile("int a = 0; for (int i = 0; i < 3; i += 1) { a += i; }"),
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(for_statement, 3)
+test_vm("for_statement", for_statement, 3)
 
 let nested_for_stmt = [
     ...parse_and_compile(`
@@ -71,7 +71,7 @@ let nested_for_stmt = [
     {tag: "LDS", name: "a"},
     {tag: "DONE"}
 ]
-test_vm(nested_for_stmt, 18)
+test_vm("nested_for_stmt", nested_for_stmt, 18)
 
 let for_while_stmt = [
     ...parse_and_compile(`
@@ -82,7 +82,7 @@ let for_while_stmt = [
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-test_vm(for_while_stmt, 72)
+test_vm("for_while_stmt", for_while_stmt, 72)
 
 let for_while_stmt2 = [
     ...parse_and_compile(`
@@ -94,7 +94,7 @@ let for_while_stmt2 = [
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-test_vm(for_while_stmt2, 72)
+test_vm("for_while_stmt2", for_while_stmt2, 72)
 
 
 let for_while_stmt3 = [
@@ -106,7 +106,7 @@ let for_while_stmt3 = [
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-test_vm(for_while_stmt3, 47)
+test_vm("for_while_stmt3", for_while_stmt3, 47)
 
 let for_while_stmt4 = [
     ...parse_and_compile(`
@@ -119,7 +119,7 @@ let for_while_stmt4 = [
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-test_vm(for_while_stmt4, 5)
+test_vm("for_while_stmt4", for_while_stmt4, 5)
 
 
 let for_while_stmt5 = [
@@ -132,4 +132,4 @@ let for_while_stmt5 = [
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-test_vm(for_while_stmt5, 10)
+test_vm("for_while_stmt5", for_while_stmt5, 10)
