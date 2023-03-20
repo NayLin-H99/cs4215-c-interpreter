@@ -195,7 +195,7 @@ function print_os() {
 export function run_vm(instrs:any[], debug:boolean = false) {
     
     let instr = instrs[PC]
-    while (instr.tag != "DONE") {
+    while (instr.tag != "DONE" && PC < instrs.length) {
         instr = instrs[PC]
         PC++;
         microcode[instr.tag](instr)

@@ -64,6 +64,62 @@ let var_blk_scope = [
 ]
 test_vm(var_blk_scope, 1)
 
+
+/**
+ * int a = 10;
+ * int b = 10;
+ * {
+ *    int b = 12;
+ *    a = a + b;
+ * }
+ * a;
+ */
+let var_blk_shadowing_scope  = [
+    ...decl_int_var_with_value("a", 10),
+    ...decl_int_var_with_value("b", 10),
+    {tag: "ENTER_BLK"},
+    ...decl_int_var_with_value("b", 12),
+    {tag: "LDS", name:"a"},
+    {tag: "LDS", name:"a"},
+    {tag: "LDS", name:"b"},
+    {tag: "BINOP", op: "+"},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+    {tag: "EXIT_BLK"},
+    {tag: "LDS", name:"a"},
+    {tag: "DONE"}
+]
+test_vm(var_blk_shadowing_scope, 22)
+
+let var_blk_shadowing_scope_2  = [
+    ...decl_int_var_with_value("a", 10),
+    ...decl_int_var_with_value("b", 10),
+    {tag: "ENTER_BLK"},
+    ...decl_int_var_with_value("b", 12),
+    {tag: "LDS", name:"a"},
+    {tag: "LDS", name:"a"},
+    {tag: "LDS", name:"b"},
+    {tag: "BINOP", op: "+"},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+    {tag: "EXIT_BLK"},
+    {tag: "LDS", name:"b"},
+    {tag: "DONE"}
+]
+test_vm(var_blk_shadowing_scope_2, 10)
+
+/**
+ * int a = 10;
+ * {
+ *  int b = 10;
+ *  a = 12;
+ * }
+ * int b = 11;
+ * a - b;
+ */
+
+
+
 /**
  * int a = 10;
  * int b = 5;

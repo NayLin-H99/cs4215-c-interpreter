@@ -107,3 +107,29 @@ let for_while_stmt3 = [
     {tag: "DONE"}
 ]
 test_vm(for_while_stmt3, 47)
+
+let for_while_stmt4 = [
+    ...parse_and_compile(`
+        int i=0;
+        int b=0;
+        for (int i=0; i<5; i += 1) {
+            int i = 1;
+            b += i;
+        }`),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm(for_while_stmt4, 5)
+
+
+let for_while_stmt5 = [
+    ...parse_and_compile(`
+        int i=5;
+        int b=0;
+        for (int i=0; i<5; i += 1) {
+            b += i;
+        }`),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm(for_while_stmt5, 10)

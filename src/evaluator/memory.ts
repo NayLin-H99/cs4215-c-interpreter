@@ -44,8 +44,6 @@ export function init_memory() {
     free = 0
     OS = []
     HEAP = new ArrayBuffer(HEAP_SIZE)
-    addr_ctxt = {}
-    var_ctxt = {}
     env = [[]]
 }
 
@@ -78,35 +76,37 @@ type dcl = {
 type frame = dcl[]
 let env : frame[] = [[]]
 
-// for fast lookups
-let addr_ctxt : Record<number, dcl> = {}
-let var_ctxt: Record<string, dcl> = {}
+
+
 
 export function declare_variable(name:string, ty:ty) : number {
-    if (var_ctxt[name] !== undefined) throw Error("Redeclaration of variable " + name)
     const cur_frame = env[env.length-1];
+    if(cur_frame.find(x => x.name === name)) throw Error("Redeclaration of variable " + name)
     const dcl : dcl = {name, ty, address:free}
     cur_frame.push(dcl)
     
-    addr_ctxt[free] = dcl
-    var_ctxt[name] = dcl
-
     free += get_ty_size(ty);
     return dcl.address
 }
 
 export function get_var_addr(name:string) {
-    return var_ctxt[name].address
+    return get_var(name).address
 }
 
 export function get_var_value(name:string) {
-    const addr = var_ctxt[name].address
     // TODO: add return value depending on type info
-    return read_word(addr)
+    return read_word(get_var_addr(name))
 }
 
+
+
 export function get_var(name:string) {
-    return var_ctxt[name]
+    for (let i=env.length-1; i >= 0; i--) {
+        const cur_frame = env[i]
+        const found = cur_frame.find(x => x.name === name)
+        if (found) return found
+    }
+    throw Error(`Variable ${name} not declared`)
 }
 
 export function assign_variable(var_op:operand, val_opr: operand) {
@@ -139,8 +139,5 @@ export function enter_block() {
     env.push([])
 }
 export function exit_block() {
-    env.pop()?.forEach(v => {
-        delete addr_ctxt[v.address]
-        delete var_ctxt[v.name]
-    })
+    env.pop();
 }
