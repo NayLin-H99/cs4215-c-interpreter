@@ -30,9 +30,9 @@ type fdecl = {
     rty: ty,
     params: string[]
     param_ty: ty[]
-    addr: number // PC value
+    address: number // PC value
 }
-type fctx = Record<string, fdecl>
+let fctx : Record<string, fdecl> = {}
 
 
 // void *free
@@ -45,6 +45,7 @@ export function init_memory() {
     OS = []
     HEAP = new ArrayBuffer(HEAP_SIZE)
     env = [[]]
+    fctx = {}
 }
 
 // correctness at byte level can only be guaranteed for 32 bits
@@ -77,7 +78,14 @@ type frame = dcl[]
 let env : frame[] = [[]]
 
 
+export function declare_function(rty:ty, name:string, params: string[], param_ty: ty[], address: number) {
+    if (fctx[name] !== undefined) throw Error("Function was already defined");
+    fctx[name] = {rty, params, param_ty, address}
+}
 
+export function get_fdecl(name: string) {
+    return fctx[name]
+}
 
 export function declare_variable(name:string, ty:ty) : number {
     const cur_frame = env[env.length-1];
@@ -97,8 +105,6 @@ export function get_var_value(name:string) {
     // TODO: add return value depending on type info
     return read_word(get_var_addr(name))
 }
-
-
 
 export function get_var(name:string) {
     for (let i=env.length-1; i >= 0; i--) {
@@ -140,4 +146,32 @@ export function enter_block() {
 }
 export function exit_block() {
     env.pop();
+}
+
+
+let RTS : any[] = []
+
+// ON CALL
+export function enter_function(ret_addr: number) {
+    // save context
+    RTS.push([env, ret_addr])
+    // frame_0 : global frame. frame_1 : param frame
+    env = [env[0], []]
+}
+
+export function binds(name:string, ty: ty, value:number) {
+    const cur_frame = env[env.length-1];
+    if(cur_frame.find(x => x.name === name)) throw Error("Redeclaration of variable " + name)
+    const dcl : dcl = {name, ty, address:free}
+    write_word(dcl.address, value)
+    cur_frame.push(dcl)
+    
+    free += get_ty_size(ty);
+}
+
+// ON RETURN
+export function exit_function() : number {
+    const [e, p] = RTS.pop()
+    env = e
+    return p
 }

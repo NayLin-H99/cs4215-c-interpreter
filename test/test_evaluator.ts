@@ -369,3 +369,68 @@ const basic_repl = [
     ],
 ]
 test_repl("basic_repl", basic_repl, [undefined,undefined,9])
+
+/**
+ * int add(int a, int b) {
+ *      int sum = 0;
+ *      sum = b + a;
+ *      return sum;
+ * }
+ * add(5, 6);
+ */
+const function_add = [
+    {tag: "FUNCTION", fname: "add", rty: int, params: ["a", "b"], param_ty: [int, int]},
+    {tag: "BR", jmp: 15},
+    {tag: "ENTER_BLK"},
+    ...decl_int_var_with_value("sum", 0), // 4 instrs
+    {tag: "LDS", name: "sum"},
+    {tag: "LDS", name: "b"},
+    {tag: "LDS", name: "a"},
+    {tag:"BINOP", op: "+"},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag: "LDS", name: "sum"},
+    {tag: "EXIT_BLK"},
+    {tag: "RET"},
+    {tag: "LDC", value: 5},
+    {tag: "LDC", value: 6},
+    {tag: "CALL", fname: "add"}
+]
+test_vm("function_add", function_add, 11)
+
+
+/* Test scoping invovling function
+ * int a = 4;
+ * int b = 5;
+ * int c = 6;
+ * int add(int a, int b) {
+ *      int sum = 0;
+ *      sum = b + a + c;
+ *      return sum;
+ * }
+ * add(6, b);
+ */
+const function_add_2 = [
+    ...decl_int_var_with_value("a", 4), // 4 instrs
+    ...decl_int_var_with_value("b", 5), // 4 instrs
+    ...decl_int_var_with_value("c", 6), // 4 instrs
+    {tag: "FUNCTION", fname: "add", rty: int, params: ["a", "b"], param_ty: [int, int]},
+    {tag: "BR", jmp: 17},
+    {tag: "ENTER_BLK"},
+    ...decl_int_var_with_value("sum", 0), // 4 instrs
+    {tag: "LDS", name: "sum"},
+    {tag: "LDS", name: "b"},
+    {tag: "LDS", name: "a"},
+    {tag:"BINOP", op: "+"},
+    {tag: "LDS", name: "c"},
+    {tag:"BINOP", op: "+"},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag: "LDS", name: "sum"},
+    {tag: "EXIT_BLK"},
+    {tag: "RET"},
+    {tag: "LDC", value: 6},
+    {tag: "LDS", name: "b"},
+    {tag: "CALL", fname: "add"}
+]
+test_vm("function_add_2", function_add_2, 17)

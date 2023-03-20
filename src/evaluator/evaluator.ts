@@ -1,5 +1,6 @@
-import { get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value } from "./memory"
-import { int, ty, get_ty_size } from "../compiler/typesystem"
+import { get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function } from "./memory"
+import { int, ty, get_ty_size, tvoid } from "../compiler/typesystem"
+import { ParameterListContext } from "../parser/CParser"
 
 
 // the only truth
@@ -77,6 +78,42 @@ const microcode : Record<string, Function> =  {
         const {name, ty} = instr.var;
         const addr = declare_variable(name, ty)
         OS.push(lvalue(addr, ty))
+    },
+
+    // Declaration of Function
+    // {tag:"FUNCTION", ...}
+    // {tag:"BR", jmp: END_OF_FUNCTION}
+    // {tag:"ENTER_BLK"}
+    // ...FUNCTION_BODY
+    // {tag:"EXIT_BLK"}
+    FUNCTION: (instr:any) => {
+        const {fname, rty, params, param_ty} = instr
+        const fn_addr = PC + 2
+        declare_function(rty, fname, params, param_ty, fn_addr)
+    },
+
+    // Calling non-void function return value through top of stack after CALL.
+    // Calling void function should not have value on top of stack
+    // void f(){}; int i = f(); This should be caught in typesystem, but it is Undefined Behaviour in current VM.
+    CALL: (instr:any) => {
+        const {fname} = instr
+        const fdecl = get_fdecl(fname)
+        // save environment context
+        enter_function(PC+1)
+
+        fdecl.params.forEach((p,i) => {
+            const v = opr_to_value(pop(OS))
+            const ty = fdecl.param_ty[i]
+            binds(p, ty, v)
+        })
+        PC = fdecl.address
+    },
+    
+    RET: (instr:any) => {
+        const ret_val = pop(OS)
+        // return value of function should be rvalue only
+        OS.push(rvalue(opr_to_value(ret_val), ret_val.ty))
+        PC = exit_function()
     },
 
     ASSIGN: (instr:any) => {
@@ -252,6 +289,8 @@ export function eval_instr(instrs : any[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
+        // console.log(instr)
+        // print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }
