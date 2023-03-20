@@ -390,8 +390,8 @@ const function_add = [
     {tag:"ASSIGN"},
     {tag:"POP"},
     {tag: "LDS", name: "sum"},
-    {tag: "EXIT_BLK"},
     {tag: "RET"},
+    {tag: "EXIT_BLK"},
     {tag: "LDC", value: 5},
     {tag: "LDC", value: 6},
     {tag: "CALL", fname: "add"}
@@ -427,10 +427,50 @@ const function_add_2 = [
     {tag:"ASSIGN"},
     {tag:"POP"},
     {tag: "LDS", name: "sum"},
-    {tag: "EXIT_BLK"},
     {tag: "RET"},
+    {tag: "EXIT_BLK"},
     {tag: "LDC", value: 6},
     {tag: "LDS", name: "b"},
     {tag: "CALL", fname: "add"}
 ]
 test_vm("function_add_2", function_add_2, 17)
+
+
+/** Test Recursion
+ * 
+ * int fac(int n) {
+ *      if (n == 1) return 1;
+ *      return n * f(n-1);
+ * }
+ * fac(4);
+ * fac(5);
+ */
+const function_fac = [
+    {tag: "FUNCTION", fname: "fac", rty: int, params: ["n"], param_ty: [int]},
+    {tag: "BR", jmp: 18},
+    {tag: "ENTER_BLK"},
+    {tag: "LDS", name: "n"},
+    {tag: "LDC", value: 1},
+    {tag: "BINOP", op: "=="},
+    {tag: "BR", true_branch: 1 , false_branch: 5},
+    {tag: "ENTER_BLK"},
+    {tag: "LDC", value: 1},
+    {tag: "RET"},
+    {tag: "EXIT_BLK"},
+    // n * ...
+    {tag: "LDS", name: "n"},
+    // fac(n-1)
+    {tag: "LDS", name: "n"},
+    {tag: "LDC", value: 1},
+    {tag: "BINOP", op: "-"},
+    {tag: "CALL", fname: "fac"},
+    {tag: "BINOP", op: "*"},
+    {tag: "RET"},
+    {tag: "EXIT_BLK"},
+    {tag: "LDC", value: 4},
+    {tag: "CALL", fname: "fac"},
+    {tag: "LDC", value: 5},
+    {tag: "CALL", fname: "fac"}
+]
+
+test_vm("function_fac", function_fac, 120)

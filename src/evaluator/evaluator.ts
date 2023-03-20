@@ -99,7 +99,7 @@ const microcode : Record<string, Function> =  {
         const {fname} = instr
         const fdecl = get_fdecl(fname)
         // save environment context
-        enter_function(PC+1)
+        enter_function(PC)
 
         fdecl.params.forEach((p,i) => {
             const v = opr_to_value(pop(OS))
@@ -289,7 +289,7 @@ export function eval_instr(instrs : any[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
-        // console.log(instr)
+        // console.log(PC, instr)
         // print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
