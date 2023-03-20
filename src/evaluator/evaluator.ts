@@ -180,8 +180,9 @@ const microcode : Record<string, Function> =  {
 
 let PC = 0;
 
-function init_vm(instrs:any[]) {
+function init_vm() {
     init_memory();
+    running_code = []
     PC = 0;
 }
 
@@ -193,28 +194,64 @@ function print_os() {
 }
 
 export function run_vm(instrs:any[], debug:boolean = false) {
-    
-    let instr = instrs[PC]
-    while (instr.tag != "DONE" && PC < instrs.length) {
-        instr = instrs[PC]
-        PC++;
-        microcode[instr.tag](instr)
-        if (debug) {
-            console.log(instr)
-            print_os()
-        }
-    }
+    // let instr = instrs[PC]
+    // while (instr.tag != "DONE" && PC < instrs.length) {
+    //     instr = instrs[PC]
+    //     PC++;
+    //     microcode[instr.tag](instr)
+    //     if (debug) {
+    //         console.log(instr)
+    //         print_os()
+    //     }
+    // }
+    do {
+        eval_instr(instrs)
+    } while(running_code[PC] && running_code[PC].tag !== "DONE");
+
     const result = OS.pop();
     if (debug) print_os();
     return result === undefined ? 0 : opr_to_value(result)
 }
 
-export function test_vm(instrs:any[], expected:number) {
-    init_vm(instrs)
+export function test_vm(name: string, instrs:any[], expected:number) {
+    init_vm()
     const result = run_vm(instrs)
     if (result === expected) {
-        console.log("Test Success")
+        console.log(`${name} : Success`)
         return
     }
-    throw Error("Test Failed, expected " + expected + " Got " + result)
+    throw Error(`${name} Failed, expected ${expected} Got ${result}`)
+}
+
+
+// TEST REPL Loop
+export function test_repl(name:string, instrss : any[][], expected: any[]) {
+    init_vm()
+    let results : any[] = []
+    for (let instrs of instrss) {
+        results.push(eval_instr(instrs))
+    }
+    // Assuming expected and results are the same length
+    for (let i=0; i<expected.length; i++) {
+        if (results[i] !== expected[i]) {
+            throw Error(`${name} Expected ${expected} Got ${results}`)
+        }
+    }
+
+    console.log(`${name} : Success`)
+}
+
+
+
+let running_code : any[] = []
+
+export function eval_instr(instrs : any[]) {
+    running_code.push(...instrs)
+    
+    while (running_code[PC] && running_code[PC].tag !== "DONE") {
+        const instr = running_code[PC]
+        PC++;
+        microcode[instr.tag](instr)
+    }
+    return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }

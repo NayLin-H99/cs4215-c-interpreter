@@ -1,5 +1,6 @@
+import exp from "constants"
 import { int, ptr } from "../src/compiler/typesystem"
-import { test_vm } from "../src/evaluator/evaluator"
+import { eval_instr, test_repl, test_vm } from "../src/evaluator/evaluator"
 
 
 // quick helper function to genegrate basic code 
@@ -36,7 +37,7 @@ let postfix_increment = [
 
     {tag:"DONE"},
 ]
-test_vm(postfix_increment, 10)
+test_vm("postfix_increment", postfix_increment, 10)
 
 /**
  * int a = 10;
@@ -62,7 +63,7 @@ let var_blk_scope = [
     {tag: "BINOP", op: "-"},
     {tag: "DONE"}
 ]
-test_vm(var_blk_scope, 1)
+test_vm("var_blk_scope", var_blk_scope, 1)
 
 
 /**
@@ -89,7 +90,7 @@ let var_blk_shadowing_scope  = [
     {tag: "LDS", name:"a"},
     {tag: "DONE"}
 ]
-test_vm(var_blk_shadowing_scope, 22)
+test_vm("var_blk_shadowing_scope", var_blk_shadowing_scope, 22)
 
 let var_blk_shadowing_scope_2  = [
     ...decl_int_var_with_value("a", 10),
@@ -106,7 +107,7 @@ let var_blk_shadowing_scope_2  = [
     {tag: "LDS", name:"b"},
     {tag: "DONE"}
 ]
-test_vm(var_blk_shadowing_scope_2, 10)
+test_vm("var_blk_shadowing_scope_2", var_blk_shadowing_scope_2, 10)
 
 /**
  * int a = 10;
@@ -143,7 +144,7 @@ let var_blk_scope2 = [
     {tag: "BINOP", op: "+"},
     {tag: "DONE"}
 ]
-test_vm(var_blk_scope2, 11)
+test_vm("var_blk_scope2", var_blk_scope2, 11)
 
 
 let pointer_addressing = [
@@ -196,7 +197,7 @@ let pointer_addressing = [
     {tag: "DONE"}
 ]
 
-test_vm(pointer_addressing, 20)
+test_vm("pointer_addressing", pointer_addressing, 20)
 
 
 /**
@@ -242,7 +243,7 @@ let branch_conditions = [
     {tag:"LDS", name: "a"},
     {tag:"DONE"},
 ]
-test_vm(branch_conditions, 20)
+test_vm("branch_conditions", branch_conditions, 20)
 
 /**
  * int i = 0;
@@ -284,7 +285,7 @@ let sum_to_10 = [
     {tag:"LDV", name:"sum"},
     {tag:"DONE"}
 ]
-test_vm(sum_to_10, 45)
+test_vm("sum_to_10", sum_to_10, 45)
 
 
 /**
@@ -301,7 +302,7 @@ let pointer_arithmetic_1 = [
     {tag:"BINOP", op: "+"},
     {tag: "DONE"}
 ]
-test_vm(pointer_arithmetic_1, 16)
+test_vm("pointer_arithmetic_1", pointer_arithmetic_1, 16)
 
 /**
  * int *a = 0;
@@ -317,7 +318,7 @@ let pointer_arithmetic_1_mirror = [
     {tag:"BINOP", op: "+"},
     {tag: "DONE"}
 ]
-test_vm(pointer_arithmetic_1_mirror, 16)
+test_vm("pointer_arithmetic_1_mirror", pointer_arithmetic_1_mirror, 16)
 
 /**
  * int *a = 8;
@@ -333,7 +334,7 @@ let pointer_arithmetic_2 = [
     {tag:"BINOP", op: "-"},
     {tag: "DONE"}
 ]
-test_vm(pointer_arithmetic_2, 0)
+test_vm("pointer_arithmetic_2", pointer_arithmetic_2, 0)
 
 
 /**
@@ -355,4 +356,16 @@ let pointer_arithmetic_3 = [
     {tag:"BINOP", op: "-"},
     {tag: "DONE"}
 ]
-test_vm(pointer_arithmetic_3, 1)
+test_vm("pointer_arithmetic_3", pointer_arithmetic_3, 1)
+
+
+const basic_repl = [
+    decl_int_var_with_value("a", 1),
+    decl_int_var_with_value("b", 10),
+    [
+        {tag: "LDS", name: "b"},
+        {tag: "LDS", name: "a"},
+        {tag:"BINOP", op: "-"},
+    ],
+]
+test_repl("basic_repl", basic_repl, [undefined,undefined,9])
