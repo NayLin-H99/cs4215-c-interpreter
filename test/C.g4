@@ -236,8 +236,9 @@ directDeclarator
     |   '(' declarator ')'
     |   directDeclarator '[' constantExpression? ']'
     |   directDeclarator '[' DigitSequence? ']'
-    |   directDeclarator '(' parameterList ')'
-    |   directDeclarator '(' identifierList? ')'
+    |   directDeclarator '(' parameterList? ')'
+    // |   directDeclarator '(' parameterList ')'
+    // |   directDeclarator '(' identifierList? ')' // this is not used?
     ;
 
 nestedParenthesesBlock
@@ -266,12 +267,13 @@ int f(int *, int);
 
 parameterDeclaration
     :   declarationSpecifiers declarator
-    |   declarationSpecifiers pointer?
+    // not supporting forward dcl/ func sig
+    // |   declarationSpecifiers pointer?
     ;
 
-identifierList
-    :   Identifier (',' Identifier)*
-    ;
+// identifierList
+//     :   Identifier (',' Identifier)*
+//     ;
 
 typeName
     :   specifierQualifierList
@@ -380,7 +382,8 @@ externalDeclaration
     ;
 
 functionDefinition
-    :   declarationSpecifiers? declarator declarationList? compoundStatement
+    // :   declarationSpecifiers? declarator declarationList? compoundStatement
+    :   declarationSpecifiers declarator compoundStatement
     ;
 
 declarationList

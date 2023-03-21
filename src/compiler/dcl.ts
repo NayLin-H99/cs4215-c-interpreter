@@ -1,7 +1,8 @@
-import { get_text } from './compiler'
+import { get_rule_name, get_text } from './compiler'
 import { ty, types } from './typesystem'
 import { compile_expr } from './expr'
-import { DeclarationContext, ForDeclarationContext } from '../parser/CParser';
+import { compile_stmt } from './stmt'
+import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser';
 
 
 
@@ -13,7 +14,7 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
 
     let typedecl = handle_declarationSpecifiers(root.declarationSpecifiers());
     if (root.initDeclaratorList && root.initDeclaratorList()) {
-        let results = handle_initDeclaratorList(root.initDeclaratorList(), typedecl .type)
+        let results = handle_initDeclaratorList(root.initDeclaratorList(), typedecl.type)
         for (let result of results) {
             const {varname, type} = result;
             const init = result.instrs;
@@ -36,7 +37,22 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
     return instrs;
 }
 
-
+export function compile_function_defn(root: FunctionDefinitionContext): any[] {
+    // functionDefinition: declarationSpecifiers declarator compoundStatement
+    const ret_type = handle_declarationSpecifiers(root.declarationSpecifiers())
+    const decl = handle_declarator(root.declarator(), ret_type.type)  // return type, varname and params
+    const params: any[] = [], param_ty: any[] = []
+    decl.params.forEach((p: any) => {
+        params.push(p.varname)
+        param_ty.push(p.type.type)
+    })
+    const cmpd_stmt = compile_stmt(root.compoundStatement())
+    return [
+        { tag: "FUNCTION", fname: decl.varname, rty: decl.type, params: params, param_ty: param_ty },
+        { tag: "BR", jmp: cmpd_stmt.length + 1 },
+        ...cmpd_stmt
+    ]
+}
 
 
 /********************************* TYPES **************************************/
@@ -127,7 +143,6 @@ function handle_declarator(root: any, type: any) {
 
     if (root.pointer()) {
         
-
         // apply pointer *
         for(let i=0; i<root.pointer().childCount; i++) {
             type = {typename: "pointer", type: type}
@@ -147,8 +162,7 @@ function handle_directDeclarator(root: any, type: any) : any {
     // | '(' declarator ')' 
     // | directDeclarator '[' constantExpression? ']' 
     // | directDeclarator '[' DigitSequence? ']'
-    // | directDeclarator '(' parameterList ')'
-    // | directDeclarator '(' identifierList? ')'
+    // | directDeclarator '(' parameterList? ')'
     if (root.Identifier && root.Identifier()) {
         const varname = get_text(root.Identifier())
         return {
@@ -157,21 +171,42 @@ function handle_directDeclarator(root: any, type: any) : any {
         }
     } else if (root.declarator && root.declarator()) {
         return handle_declarator(root.declarator(), type)
-    } else if (root.directDeclarator && get_text(root.children[1]) === '[') {        
+    } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {        
         throw Error("array not supported")
-    } else if (root.directDeclarator && get_text(root.children[1]) === '(') {        
-        throw Error("function not supported")
+    } else if (root.directDeclarator() && get_text(root.children[1]) === '(') {
+        const varname = get_text(root.directDeclarator())
+        let params = undefined
+        if (root.parameterList && root.parameterList()) {
+            params = handle_parameterList(root.parameterList())
+        }
+        return {
+            type,
+            varname,
+            params
+        }
     }
     throw Error("not implemented")
 }
 
+function handle_parameterList(root: any) {
+    // parameterDeclaration (',' parameterDeclaration)*
+    const params = []
+    for (let i = 0; i < root.childCount; i += 2) {
+        params.push(handle_parameterDeclaration(root.children[i]))
+    }
+    return params
+}
+
+function handle_parameterDeclaration(root: any) {
+    // declarationSpecifiers declarator
+    return handle_declarator(root.children[1], handle_declarationSpecifiers(root.children[0]))
+}
 
 /********************************** RHS ***************************************/
 function handle_initializer(root: any) {
     // initializer : assignmentExpression | '{' initializerList ','? '}'
     if (root.assignmentExpression) {
         // assignmentExpression should be handled by expr handler
-        // TODO: HANDLE ASSIGNMENTEXPRESSION
         return compile_expr(root.assignmentExpression())
     } else {
         handle_initializerList(root);    

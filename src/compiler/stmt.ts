@@ -151,6 +151,18 @@ const compile_stmt_impl : Record<string, Function> = {
         }
     },
     jumpStatement: (root: any) => {
-
+        const first = get_text(root.children[0]) // either continue, break or return
+        if (first === "return") {
+            // 'return' expression? ';'
+            const instrs = []
+            if (root.children[1]) {
+                instrs.push(...compile_expr(root.children[1]))
+            }
+            instrs.push({tag: "RET"})
+            return instrs
+        } else {
+            // 'continue'| 'break' ';'
+            throw Error("continue or break stmt")
+        }
     },
 }

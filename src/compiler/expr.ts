@@ -57,6 +57,18 @@ const base_expr_helper = (root: any) => {
     return instrs
 }
 
+const arg_lst_helper = (root: any) => {
+    // i.e. generate instructions to load the params
+    // primaryExpression '(' argumentExpressionList? ')'
+    // argumentExpressionList: assignmentExpression (',' assignmentExpression)*
+    const instrs: any = []
+    if (!root) return instrs
+    for (let i = 0; i < root.childCount; i += 2) {
+        instrs.push(...compile_expr(root.children[i]))
+    }
+    return instrs
+}
+
 const compile_expr_impl : Record<string, Function> = {
     expression: (root:any) => {
         // assignmentExpression (',' assignmentExpression)*
@@ -112,8 +124,15 @@ const compile_expr_impl : Record<string, Function> = {
         throw Error("Some unary expression not implemented")
     },
     postfixExpression: (root:any) => {
-        const first = compile_expr(root.children[0]);
-        if (root.childCount === 1) return first;
+        if (root.childCount === 1) return compile_expr(root.children[0])
+        else if (get_text(root.children[1]) === '(') {
+            return [
+                ...arg_lst_helper(root.children[2]),
+                {tag: "CALL", fname: get_text(root.children[0])}
+            ]
+        } else {
+            throw Error("Not supported postfixExpression")
+        }
     },
     primaryExpression: (root:any) => {
         if (root.Constant()) {

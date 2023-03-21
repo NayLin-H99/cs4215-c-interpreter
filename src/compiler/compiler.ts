@@ -11,7 +11,7 @@ import { get_ty_size } from './typesystem'
 
 import { env, reset_memory_env, get_variable, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
 
-import { compile_declaration } from './dcl'
+import { compile_declaration, compile_function_defn } from './dcl'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
 
@@ -92,6 +92,10 @@ externalDeclaration:
         // functionDefinition | declaration | ';'
         // if (root.children[0].symbol.text === ";") return;
         compile(root.children[0])
+    },
+functionDefinition:
+    (root: any) => {
+        instrs.push(...compile_function_defn(root))
     },
 declaration:
     (root: any) => {

@@ -1,3 +1,4 @@
+import { parse } from "path";
 import parse_and_compile from "../src/compiler/compiler"
 import { test_vm } from "../src/evaluator/evaluator";
 
@@ -133,3 +134,30 @@ let for_while_stmt5 = [
     {tag: "DONE"}
 ]
 test_vm("for_while_stmt5", for_while_stmt5, 10)
+
+let func_add_stmt = [
+    ...parse_and_compile(`
+    int add(int a, int b) {
+        int sum = 0;
+        sum = b + a;
+        return sum;
+    }
+    int a = add(5, 6);
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("func_add_stmt", func_add_stmt, 11)
+
+let func_recurse_stmt = [
+    ...parse_and_compile(`
+    int fac(int n) {
+        if (n == 1) return 1;
+        return n * fac(n-1);
+    }
+    int a = fac(4);
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("func_recurse_stmt", func_recurse_stmt, 24)

@@ -440,7 +440,7 @@ test_vm("function_add_2", function_add_2, 17)
  * 
  * int fac(int n) {
  *      if (n == 1) return 1;
- *      return n * f(n-1);
+ *      return n * fac(n-1);
  * }
  * fac(4);
  * fac(5);
