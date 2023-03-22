@@ -67,8 +67,8 @@ const jmp_stmt_helper = (s: instruction[], adv: instruction[] | undefined) => {
     for (let i = 0; i < break_idxs.length; i++) {
         const break_idx = break_idxs[i]
         s[break_idx - 1].n = count_blk_nesting(s, break_idx) + 1    // update POP_ENV instr
-        s[break_idx] = {tag: "BR", n: s.length - (i + 1) + 2 }      // replace BREAK instr
-        if (adv) s[break_idx].n += adv.length                       // need to skip adv section for for loops
+        s[break_idx] = {tag: "BR", jmp: s.length - break_idx + 2 }      // replace BREAK instr
+        if (adv) s[break_idx].jmp += adv.length                       // need to skip adv section for for loops
     }
     
     // handling continue
