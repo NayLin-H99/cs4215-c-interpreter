@@ -2,8 +2,8 @@ import { get_rule_name, get_text } from './compiler'
 import { ty, types } from './typesystem'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
-import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser';
-
+import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser'
+import { instruction } from '../evaluator/evaluator'
 
 
 // helper function for declarations
@@ -203,17 +203,17 @@ function handle_parameterDeclaration(root: any) {
 }
 
 /********************************** RHS ***************************************/
-function handle_initializer(root: any) {
+function handle_initializer(root: any) : instruction[] {
     // initializer : assignmentExpression | '{' initializerList ','? '}'
     if (root.assignmentExpression) {
         // assignmentExpression should be handled by expr handler
         return compile_expr(root.assignmentExpression())
     } else {
-        handle_initializerList(root);    
+        return handle_initializerList(root);    
     }
 }
 
-function handle_initializerList(root: any) {
+function handle_initializerList(root: any) : instruction[] {
     // initializerList : designation? initializer (',' designation? initializer)*
     throw Error("Struct/Array not supported");
 }

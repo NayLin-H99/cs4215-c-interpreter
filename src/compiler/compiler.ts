@@ -5,8 +5,6 @@ import {
 import { CLexer } from '../parser/CLexer'
 import { CParser,  } from '../parser/CParser'
 
-import { instruction, OP, operand, ind, imm, R0, R1, R2, R3, PC, BP, SP, RA } from '../vm/datastructures'
-
 import { get_ty_size } from './typesystem'
 
 import { env, reset_memory_env, get_variable, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
@@ -14,13 +12,14 @@ import { env, reset_memory_env, get_variable, get_variable_operand, enter_block,
 import { compile_declaration, compile_function_defn } from './dcl'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
+import { instruction } from '../evaluator/evaluator'
 
 const file_path: string = './test/test_files/expression.c';
 // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
 // const inputStream = CharStreams.fromString("int c = a + b;");
 
 
-export default function parse_and_compile(input:string) {
+export default function parse_and_compile(input:string): instruction[] {
     // reset env
     reset_memory_env();
 
@@ -37,11 +36,11 @@ export default function parse_and_compile(input:string) {
 }
 
 
-export const get_rule_name = (ctx:any) => CParser.ruleNames[ctx.ruleIndex]
+export const get_rule_name = (ctx:any) : string => CParser.ruleNames[ctx.ruleIndex]
 
-export const is_rule = (node:any) => get_rule_name(node) !== undefined
+export const is_rule = (node:any) : boolean => get_rule_name(node) !== undefined
 
-const print_tree = (root : any, depth : number) => {
+export const print_tree = (root : any, depth : number) => {
     if (!root) return;
     if (is_rule(root)) {
         console.log("-".repeat(depth * 2) + "RULE: " + get_rule_name(root))
@@ -63,7 +62,7 @@ export function get_text(root:any) : string {
 }
 
 /**
- * Instructions and Compile Env will be similar to the homeworks
+ * Instructions and Compiler will be similar to the homeworks
  */
 type compile_fn_ty = (root: any) => void;
 type comp_map = Record<string, compile_fn_ty>;

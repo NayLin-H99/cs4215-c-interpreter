@@ -1,13 +1,14 @@
 import { is_rule, get_text, get_rule_name } from './compiler'
+import { instruction } from '../evaluator/evaluator'
 
 
-export function compile_expr(root:any) {
+export function compile_expr(root:any) : instruction[] {
     return compile_expr_impl[get_rule_name(root)](root);
 }
 
 
 // binary op follows the same pattern
-const binary_helper = (root:any) => {
+const binary_helper = (root:any) : instruction[] => {
     const first = compile_expr(root.children[0]);
     if (root.childCount === 1) return first;
     let instrs = first;
@@ -23,7 +24,7 @@ const binary_helper = (root:any) => {
     return instrs;
 }
 
-const assn_helper = (root: any) => {
+const assn_helper = (root: any) : instruction[] => {
     let instrs = []
     const e1 = compile_expr(root.children[0])
     const e2 = compile_expr(root.children[2])
@@ -47,7 +48,7 @@ const assn_helper = (root: any) => {
     return instrs
 }
 
-const base_expr_helper = (root: any) => {
+const base_expr_helper = (root: any) : instruction[] => {
     let instrs : any[] = []
     for (let i=0; i < root.childCount; i += 2) {
         instrs.push(...compile_expr(root.children[i]))
@@ -57,7 +58,7 @@ const base_expr_helper = (root: any) => {
     return instrs
 }
 
-const arg_lst_helper = (root: any) => {
+const arg_lst_helper = (root: any) : instruction[] => {
     // i.e. generate instructions to load the params
     // primaryExpression '(' argumentExpressionList? ')'
     // argumentExpressionList: assignmentExpression (',' assignmentExpression)*

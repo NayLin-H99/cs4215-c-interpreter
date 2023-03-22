@@ -135,6 +135,51 @@ let for_while_stmt5 = [
 ]
 test_vm("for_while_stmt5", for_while_stmt5, 10)
 
+// let break_stmt = [
+//     ...parse_and_compile(`
+//         int i = 5;
+//         for (; i > 0; i -= 1) {
+//             break;
+//         }`),
+//     {tag: "LDS", name: "i"},
+//     {tag: "DONE"}
+// ]
+// console.log(break_stmt)
+// test_vm("break_stmt", break_stmt, 5)
+
+
+// let break_stmt1 = [
+//     ...parse_and_compile(`
+//         int a = 0;
+//         for (int i = 5; i > 0; i -= 1) {
+//             a += 1;
+//             if (a > 3) break;
+//         }`),
+//     {tag: "LDS", name: "a"},
+//     {tag: "DONE"}
+// ]
+// test_vm("break_stmt1", break_stmt1, 4)
+
+let break_stmt2 = [
+    ...parse_and_compile(`
+        int a = 0;
+        while(1) {
+            a += 1;
+            if (a > 3) break;
+        }`),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+console.log(break_stmt2)
+test_vm("break_stmt2", break_stmt2, 4)
+
+// let continue_stmt = [
+
+// ]
+// let continue_stmt1 = [
+    
+// ]
+
 let func_add_stmt = [
     ...parse_and_compile(`
     int add(int a, int b) {

@@ -1,13 +1,44 @@
 import { is_rule, get_text, get_rule_name } from './compiler'
 import { compile_expr } from './expr';
 import { compile_declaration } from './dcl';
+import { instruction } from '../evaluator/evaluator'
 
-export const compile_stmt = (root: any) => {
+export const compile_stmt = (root: any) : instruction[] => {
     // labeledStatement | compoundStatement | expressionStatement | selectionStatement | iterationStatement | jumpStatement
     return compile_stmt_impl[get_rule_name(root)](root)
 }
 
-const if_helper = (root: any) => {
+/**************************** GENERAL HELPERS **********************************/
+// iterates through the instructions with matching tags and returns lst of idx
+const scan_tag = (s: instruction[], tag: string) : number[] => {
+    let res: number[] = []
+    for (let i = 0; i < s.length; i++) if (s[i].tag === tag) res.push(i)
+    return res;
+}
+
+// checks instructions for depth of nesting
+const count_blk_nesting = (s: instruction[], idx: number): number => {
+    let cnt: number = 0
+    for (let i = 0; i < idx; i++) if (s[i].tag === "ENTER_BLK") cnt+= 1
+    return cnt
+}
+
+const blk_helper = (root: any) : instruction[] => {
+    // blockItemList:  blockItem+;
+    // blockItem:      statement | declaration;
+    let instrs = []
+    for (let i = 0; i < root.childCount; i++) {
+        if (root.children[i].statement()) {
+            instrs.push(...compile_stmt(root.children[i].statement()))
+        } else {
+            instrs.push(...compile_declaration(root.children[i].declaration()))
+        }
+    }
+    return instrs
+}
+
+/***************************** CONDITIONALS ***********************************/
+const if_helper = (root: any) : instruction[] => {
     const e = compile_expr(root.children[2])
     const s1 = compile_stmt(root.children[4])
     let instrs =  [
@@ -28,24 +59,32 @@ const if_helper = (root: any) => {
     return instrs
 }
 
-const blk_helper = (root: any) : any[] => {
-    // blockItemList:  blockItem+;
-    // blockItem:      statement | declaration;
-    let instrs = []
-    for (let i = 0; i < root.childCount; i++) {
-        if (root.children[i].statement()) {
-            instrs.push(...compile_stmt(root.children[i].statement()))
-        } else {
-            instrs.push(...compile_declaration(root.children[i].declaration()))
-        }
+
+/********************************* LOOPS **************************************/
+const jmp_stmt_helper = (s: instruction[], adv: instruction[] | undefined) => {
+    // handling break
+    const break_idxs = scan_tag(s, "BREAK")
+    for (let i = 0; i < break_idxs.length; i++) {
+        const break_idx = break_idxs[i]
+        s[break_idx - 1].n = count_blk_nesting(s, break_idx) + 1    // update POP_ENV instr
+        s[break_idx] = {tag: "BR", n: s.length - (i + 1) + 2 }      // replace BREAK instr
+        if (adv) s[break_idx].n += adv.length                       // need to skip adv section for for loops
     }
-    return instrs
+    
+    // handling continue
+    const cont_idxs = scan_tag(s, "CONTINUE")
+    for (let i = 0; i < cont_idxs.length; i++) {
+        const cont_idx = cont_idxs[i]
+        s[cont_idx - 1].n = count_blk_nesting(s, cont_idx)          // update POP_ENV instr
+        s[cont_idx] = {tag: "BR", jmp: s.length - (i + 1)}          // replace CONTINUE instr
+    }
 }
 
-const while_helper = (root: any) => {
+const while_helper = (root: any) : instruction[] => {
     // While '(' expression ')' statement
     const e = compile_expr(root.children[2])
     const s = compile_stmt(root.children[4])
+    jmp_stmt_helper(s, undefined);
     return [
         ...e,
         {tag: "BR", true_branch: 1, false_branch: 1 + s.length + 2 + 1},
@@ -56,7 +95,7 @@ const while_helper = (root: any) => {
     ]
 }
 
-const for_helper = (root: any) => {
+const for_helper = (root: any) : instruction[] => {
     // For '(' forCondition ')' statement
     // forCondition : (forDeclaration | expression?) ';' forExpression? ';' forExpression?
     // forDeclaration : declarationSpecifiers initDeclaratorList?
@@ -70,17 +109,18 @@ const for_helper = (root: any) => {
     for (let i=0; i<forCondition.childCount; i++) {
         if (get_text(forCondition.children[i]) !== ";") {
             slices[idx] = forCondition.children[i]
-        } else {
+        } else {  // ';'
             idx++
         }
     }
     let [init, pred, adv] = slices 
-    let i_init = [], i_pred = [], i_adv = [];
+    let i_init : instruction[] = [], i_pred : instruction[] = [], i_adv : instruction[] = [];
     if (init) {
         i_init = get_rule_name(init) === "forDeclaration" ? compile_declaration(init) : compile_expr(init)
     }
     if (pred) i_pred = compile_expr(pred)
     if (adv) i_adv = compile_expr(adv)
+    jmp_stmt_helper(s, i_adv)
     return [
         // ENTER BLOCK
         { tag: "ENTER_BLK" },
@@ -100,6 +140,8 @@ const for_helper = (root: any) => {
         { tag: "EXIT_BLK" }
     ]
 }
+
+/******************************************************************************/
 
 const compile_stmt_impl : Record<string, Function> = {
     statement: (root: any) => {
@@ -161,8 +203,12 @@ const compile_stmt_impl : Record<string, Function> = {
             instrs.push({tag: "RET"})
             return instrs
         } else {
-            // 'continue'| 'break' ';'
-            throw Error("continue or break stmt")
+            // 'continue' | 'break' ';'
+            // two dummy instructions which will be updated, check `while_helper` or `for_helper`
+            return [
+                {tag: "POP_ENV"}, 
+                {tag: first.toUpperCase()}
+            ]
         }
     },
 }

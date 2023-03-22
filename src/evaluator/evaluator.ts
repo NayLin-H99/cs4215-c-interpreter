@@ -1,7 +1,7 @@
 import { get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env } from "./memory"
 import { int, ty, get_ty_size, tvoid } from "../compiler/typesystem"
 
-type instruction = {tag:string} & {[key in string]: any} 
+export type instruction = {tag:string} & {[key in string]: any} 
 
 
 // the only truth
