@@ -161,3 +161,20 @@ let func_recurse_stmt = [
     {tag: "DONE"}
 ]
 test_vm("func_recurse_stmt", func_recurse_stmt, 24)
+
+let func_recurse_stmt2 = [
+    ...parse_and_compile(`
+    int f1(int a) {
+        if (a == 1) return a;
+        return f2(a-1);
+    }
+    int f2 (int b) {
+        if (b==1) return b;
+        return f1(b-1);
+    }
+    int a = f2(3);
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("func_recurse_stmt2", func_recurse_stmt2, 1)
