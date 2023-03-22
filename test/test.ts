@@ -150,7 +150,7 @@ test_vm("break_stmt", break_stmt, 5)
 let break_stmt1 = [
     ...parse_and_compile(`
         int a = 0;
-        for (int i = 5; i > 0; i -= 1) {
+        for (int i = 10; i > 0; i -= 1) {
             a += 1;
             if (a > 3) break;
         }`),
@@ -180,12 +180,11 @@ let continue_stmt = [
             continue;
             b += 1;
         }`),
-    // {tag: "LDS", name: "a"},            // check a
-    {tag: "LDS", name: "b"},            // check b
+    {tag: "LDS", name: "a"},            // check a
     {tag: "DONE"}
 ]
-// test_vm("continue_stmt", continue_stmt, 3)  // check a
-test_vm("continue_stmt", continue_stmt, 0)  // check b
+console.log(continue_stmt)
+test_vm("continue_stmt", continue_stmt, 3)  // check a
 
 let continue_stmt1 = [
     ...parse_and_compile(`
@@ -196,12 +195,64 @@ let continue_stmt1 = [
             continue;
             b += 1;
         }`),
-    // {tag: "LDS", name: "a"},            // check a
     {tag: "LDS", name: "b"},            // check b
     {tag: "DONE"}
 ]
-// test_vm("continue_stmt1", continue_stmt1, 3) // check a
 test_vm("continue_stmt1", continue_stmt1, 0) // check b
+
+let continue_stmt2 = [
+    ...parse_and_compile(`
+        int a = 0;
+        int b = 1;
+        for (int i = 0; i < 3; i += 1) {
+            if (a >= 0) {
+                a += 1;
+                continue;
+            }
+            b += 1;
+        }`),
+    {tag: "LDS", name: "b"},            // check b
+    {tag: "DONE"}
+]
+test_vm("continue_stmt2", continue_stmt2, 1) // check b
+
+
+let continue_stmt3 = [
+    ...parse_and_compile(`
+        int a = 0;
+        int b = 1;
+        for (int i = 0; i < 3; i += 1) {
+            if (a >= 0) {
+                if (b == 1) {
+                    a += 1;
+                    continue;
+                }
+            }
+            b += 1;
+        }`),
+    {tag: "LDS", name: "b"},            // check b
+    {tag: "DONE"}
+]
+test_vm("continue_stmt3", continue_stmt3, 1) // check b
+
+
+let continue_stmt4 = [
+    ...parse_and_compile(`
+        int a = 0;
+        int b = 1;
+        for (int i = 0; i < 3; i += 1) {
+            if (a >= 0) {
+                if (b == 1) {
+                    a += 1;
+                    continue;
+                }
+            }
+            b += 1;
+        }`),
+    {tag: "LDS", name: "a"},            // check a
+    {tag: "DONE"}
+]
+test_vm("continue_stmt4", continue_stmt4, 3) // check a
 
 let func_add_stmt = [
     ...parse_and_compile(`

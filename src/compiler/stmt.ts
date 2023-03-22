@@ -76,7 +76,7 @@ const jmp_stmt_helper = (s: instruction[], adv: instruction[] | undefined) => {
     for (let i = 0; i < cont_idxs.length; i++) {
         const cont_idx = cont_idxs[i]
         s[cont_idx - 1].n = count_blk_nesting(s, cont_idx)          // update POP_ENV instr
-        s[cont_idx] = {tag: "BR", jmp: s.length - (i + 1)}          // replace CONTINUE instr
+        s[cont_idx] = {tag: "BR", jmp: s.length - cont_idx}          // replace CONTINUE instr
     }
 }
 
