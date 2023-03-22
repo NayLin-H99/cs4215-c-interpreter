@@ -1,5 +1,5 @@
-import { get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env } from "./memory"
-import { int, ty, get_ty_size, tvoid } from "../compiler/typesystem"
+import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env } from "./memory"
+import { int, ty, get_ty_size, tvoid, ptr } from "../compiler/typesystem"
 
 export type instruction = {tag:string} & {[key in string]: any} 
 
@@ -50,6 +50,14 @@ const pop = (stack:operand[]) : operand =>  {
     const result = stack.pop();
     if (result === undefined) throw Error("empty stack")
     return result
+}
+
+const builtin : Record<string, Function> = {
+    malloc: allocate
+}
+
+const builtin_arity : Record<string, number> = {
+    malloc: 1
 }
 
 const microcode : Record<string, Function> =  {
@@ -105,6 +113,18 @@ const microcode : Record<string, Function> =  {
     // void f(){}; int i = f(); This should be caught in typesystem, but it is Undefined Behaviour in current VM.
     CALL: (instr:any) => {
         const {fname} = instr
+        if (fname in builtin) {
+            const n_args = builtin_arity[fname]
+            const fn = builtin[fname]
+            let args : any[] = []
+            for (let i=0; i<n_args; i++) {
+                args.push(opr_to_value(pop(OS)))
+            }
+            OS.push(rvalue(fn(...args), int))
+            return
+        }
+
+        // not built in
         const fdecl = get_fdecl(fname)
         // save environment context
         enter_function(PC)

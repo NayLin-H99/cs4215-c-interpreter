@@ -66,6 +66,13 @@ function write_byte(address:number, value:number) {
     HEAP_VIEW.setUint8(address, value)
 }
 
+// allocate n bytes
+export function allocate(bytes:number) {
+    const addr = free
+    free += bytes
+    return addr
+}
+
 // ENVIRONMENTS 
 
 type dcl = {

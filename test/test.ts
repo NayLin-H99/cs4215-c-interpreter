@@ -144,7 +144,6 @@ let break_stmt = [
     {tag: "LDS", name: "i"},
     {tag: "DONE"}
 ]
-console.log(break_stmt)
 test_vm("break_stmt", break_stmt, 5)
 
 
@@ -247,3 +246,27 @@ let func_recurse_stmt2 = [
     {tag: "DONE"}
 ]
 test_vm("func_recurse_stmt2", func_recurse_stmt2, 1)
+
+let malloc_read_write = [
+    ...parse_and_compile(`
+        int *a = malloc(8);
+        *a = 15;
+        int b = *a;
+    `),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("malloc_read_write", malloc_read_write, 15);
+
+let malloc_read_write_contiguous = [
+    ...parse_and_compile(`
+        int *a = malloc(8 * 3);
+        *a = 5;
+        *(a+2) = 7;
+        *(a+1) = 6;
+        int b = *a + *(a+1) + *(a+2);
+    `),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("malloc_read_write_contiguous", malloc_read_write_contiguous, 18);
