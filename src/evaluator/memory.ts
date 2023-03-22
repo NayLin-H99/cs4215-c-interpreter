@@ -147,6 +147,11 @@ export function enter_block() {
 export function exit_block() {
     env.pop();
 }
+export function pop_env(n : number) {
+    for(let i=0; i<n; i++) {
+        env.pop();
+    }
+}
 
 
 let RTS : any[] = []

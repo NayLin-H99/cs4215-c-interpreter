@@ -146,6 +146,28 @@ let var_blk_scope2 = [
 ]
 test_vm("var_blk_scope2", var_blk_scope2, 11)
 
+/**
+ * int a = 5;
+ * {
+ *    int a = 10;
+ *      { 
+ *        int a = 11;   
+ *      } // do not compile this
+ * } // do not compile this
+ * pop_env(2)
+ * a;
+ */
+let multi_level_scope_exit = [
+    ...decl_int_var_with_value("a", 5),
+    {tag: "ENTER_BLK"},
+    ...decl_int_var_with_value("a", 10),
+    {tag: "ENTER_BLK"},
+    ...decl_int_var_with_value("a", 11),
+    {tag: "POP_ENV", n: 2},
+    {tag: "LDS", name: "a"}
+]
+test_vm("multi_level_scope_exit", multi_level_scope_exit, 5)
+
 
 let pointer_addressing = [
     // int v1 = 10;
