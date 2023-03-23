@@ -232,7 +232,7 @@ const microcode : Record<string, Function> =  {
         const {true_branch, false_branch} = instr
         if (true_branch && false_branch)
         {
-            PC += opr_to_value(pop(OS)) ?  true_branch : false_branch
+            PC += is_true(opr_to_value(pop(OS))) ?  true_branch : false_branch
         } else {
             PC += instr.jmp
         }
