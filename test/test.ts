@@ -356,3 +356,17 @@ let memory_representation_test = [
     {tag: "DONE"}
 ]
 test_vm("memory_representation_test", memory_representation_test, 0x0000010101010101);
+
+let void_function_test = [
+    ...parse_and_compile(`
+        int a = 0;
+        void modify(int n) {
+            a = n;
+            return;
+        }
+        modify(10);
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("void_function_test", void_function_test, 10);

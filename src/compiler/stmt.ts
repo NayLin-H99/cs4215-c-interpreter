@@ -204,10 +204,13 @@ const compile_stmt_impl : Record<string, Function> = {
         if (first === "return") {
             // 'return' expression? ';'
             const instrs = []
-            if (root.children[1]) {
-                instrs.push(...compile_expr(root.children[1]))
+            if (root.expression && root.expression()) {
+                instrs.push(...compile_expr(root.expression()))
+                instrs.push({tag: "RET"})
+            } else {
+                instrs.push({tag: "RET", is_void: true})
             }
-            instrs.push({tag: "RET"})
+            
             return instrs
         } else {
             // 'continue' | 'break' ';'

@@ -138,9 +138,11 @@ const microcode : Record<string, Function> =  {
     },
     
     RET: (instr:any) => {
-        const ret_val = pop(OS)
-        // return value of function should be rvalue only
-        OS.push(rvalue(opr_to_value(ret_val), ret_val.ty))
+        if (!instr.is_void) {
+            const ret_val = pop(OS)
+            // return value of function should be rvalue only
+            OS.push(rvalue(opr_to_value(ret_val), ret_val.ty))
+        }
         PC = exit_function()
     },
 
