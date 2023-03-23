@@ -321,3 +321,38 @@ let malloc_read_write_contiguous = [
     {tag: "DONE"}
 ]
 test_vm("malloc_read_write_contiguous", malloc_read_write_contiguous, 18);
+
+
+let malloc_fibo_fast = [
+    ...parse_and_compile(`
+        int fibo(int n) {
+            if (n < 2) return 1;
+            int *a = malloc(8 * n);
+            *(a) = 1;
+            *(a+1) = 1;
+            int i = 0;
+            for (i=2; i<n; i += 1) {
+                *(a+i) = *(a+i-1) + *(a+i-2);
+            }
+            return *(a + n - 1);
+        }
+        int a = fibo(3);
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("malloc_fibo_fast", malloc_fibo_fast, 2);
+
+let memory_representation_test = [
+    ...parse_and_compile(`
+        int a = 0;
+        // implicit conversion
+        char *b = &a; 
+        for (int i=0; i<6; i+=1) {
+            *(b+i) = 1;
+        }
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("memory_representation_test", memory_representation_test, 0x0000010101010101);

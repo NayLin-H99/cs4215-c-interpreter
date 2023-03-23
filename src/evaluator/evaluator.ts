@@ -1,4 +1,4 @@
-import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_word, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env } from "./memory"
+import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env } from "./memory"
 import { int, ty, get_ty_size, tvoid, ptr } from "../compiler/typesystem"
 
 export type instruction = {tag:string} & {[key in string]: any} 
@@ -147,6 +147,7 @@ const microcode : Record<string, Function> =  {
     ASSIGN: (instr:any) => {
         const val_op = pop(OS);
         const var_op = pop(OS);
+        
         assign_variable(var_op, val_op);
         OS.push(var_op)
     },
@@ -252,10 +253,12 @@ function init_vm() {
 }
 
 const opr_to_value = (opr: operand) => 
-    opr.tag === "lvalue" ? read_word(opr.value) : opr.value
+    opr.tag === "lvalue" ? read_as(opr.ty)(opr.value) : opr.value
 
 function print_os() {
-    console.log(OS.map(opr_to_value))
+    const os_val_str = (x:operand) => 
+        x.tag === "lvalue" ? `${x.value} => ${opr_to_value(x)}` : opr_to_value(x)
+    console.log(OS.map(os_val_str))
 }
 
 export function run_vm(instrs:any[], debug:boolean = false) {

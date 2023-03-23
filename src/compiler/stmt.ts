@@ -116,11 +116,18 @@ const for_helper = (root: any) : instruction[] => {
     let [init, pred, adv] = slices 
     let i_init : instruction[] = [], i_pred : instruction[] = [], i_adv : instruction[] = [];
     if (init) {
-        i_init = get_rule_name(init) === "forDeclaration" ? compile_declaration(init) : compile_expr(init)
+        if (get_rule_name(init) === "forDeclaration") {
+            i_init = compile_declaration(init)
+        } else {
+            i_init = compile_expr(init)
+            if (i_init) i_init.push({tag:"POP"})
+        }
     }
     if (pred) i_pred = compile_expr(pred)
-    if (adv) i_adv = compile_expr(adv)
+    if (adv) i_adv = compile_expr(adv) 
+    if (i_adv) i_adv.push({tag:"POP"})
     jmp_stmt_helper(s, i_adv)
+    
     return [
         // ENTER BLOCK
         { tag: "ENTER_BLK" },
@@ -129,7 +136,7 @@ const for_helper = (root: any) : instruction[] => {
         // PRED
         ...i_pred,
         // BR to EXIT BLOCK
-        { tag: "BR", true_branch: 1, false_branch: s.length + i_adv.length + 2 },
+        { tag: "BR", true_branch: 1, false_branch: s.length + i_adv.length + 2  },
         // STATEMENT
         ...s,
         // ADV

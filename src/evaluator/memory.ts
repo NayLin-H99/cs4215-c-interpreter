@@ -50,7 +50,7 @@ export function init_memory() {
 
 // correctness at byte level can only be guaranteed for 32 bits
 // due to difference in numerical representations between C and JS number
-export function read_word(address : number) {
+function read_word(address : number) {
     return HEAP_VIEW.getFloat64(address, LITTLE_ENDIAN)
 }
 
@@ -65,6 +65,18 @@ function read_byte(address:number) {
 function write_byte(address:number, value:number) {
     HEAP_VIEW.setUint8(address, value)
 }
+
+export const read_as = (ty: ty) => (address:number) => 
+    ty.typename === "char" ? HEAP_VIEW.getUint8(address) :
+    ty.typename === "float" || ty.typename === "double" ? HEAP_VIEW.getFloat64(address) :
+    // everything else are 8 bytes
+    Number(HEAP_VIEW.getBigInt64(address, LITTLE_ENDIAN))
+
+const write_as = (ty: ty) => (address:number, v:number) => 
+    ty.typename === "char" ? HEAP_VIEW.setUint8(address, v) :
+    ty.typename === "float" || ty.typename === "double" ? HEAP_VIEW.setFloat64(address, v) :
+    // everything else are 8 bytes
+    Number(HEAP_VIEW.setBigInt64(address, BigInt(v), LITTLE_ENDIAN))
 
 // allocate n bytes
 export function allocate(bytes:number) {
@@ -110,7 +122,8 @@ export function get_var_addr(name:string) {
 
 export function get_var_value(name:string) {
     // TODO: add return value depending on type info
-    return read_word(get_var_addr(name))
+    const v = get_var(name)
+    return read_as(v.ty)(v.address)
 }
 
 export function get_var(name:string) {
@@ -125,9 +138,9 @@ export function get_var(name:string) {
 export function assign_variable(var_op:operand, val_opr: operand) {
     const address = var_op.value;
     const value : number = 
-        val_opr.tag === "lvalue" ? read_word(val_opr.value) : val_opr.value
-    // assume 8 byte sizes for now
-    write_word(address, value)
+        val_opr.tag === "lvalue" ? read_as(val_opr.ty)(val_opr.value) : val_opr.value
+    
+    write_as(var_op.ty)(address, value)
 }
 
 // address of operand : &
@@ -141,10 +154,9 @@ export function deref(opr: operand) : lvalue {
     if (opr.ty.typename !== "pointer" && opr.tag === "rvalue") throw Error("Can only deref pointers");
 
     let value : number = 
-        opr.tag === "lvalue" ? read_word(opr.value) : opr.value
-
-    const ty = opr.ty.typename === "pointer" ? opr.ty.type : opr.ty
+        opr.tag === "lvalue" ? read_as(opr.ty)(opr.value) : opr.value
     
+    const ty = opr.ty.typename === "pointer" ? opr.ty.type : opr.ty
     return lvalue(value, ty)
 }
 
@@ -175,7 +187,7 @@ export function binds(name:string, ty: ty, value:number) {
     const cur_frame = env[env.length-1];
     if(cur_frame.find(x => x.name === name)) throw Error("Redeclaration of variable " + name)
     const dcl : dcl = {name, ty, address:free}
-    write_word(dcl.address, value)
+    write_as(dcl.ty)(dcl.address, value)
     cur_frame.push(dcl)
     
     free += get_ty_size(ty);
