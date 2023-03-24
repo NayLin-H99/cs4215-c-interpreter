@@ -496,3 +496,35 @@ const function_fac = [
 ]
 
 test_vm("function_fac", function_fac, 120)
+
+
+/**
+ * int a[5];
+ * a[1] = 42;
+ * int b = a[1];
+ */
+const arr_1d = [
+    // int a[5]
+    {tag: "DECL", var: { name:"a", ty: {typename: "arr", ty: int, n_elems: 5} }},
+    {tag: "POP"},
+    // a[1] == a+1
+    {tag: "LDS", name: "a"},
+    {tag: "LDC", value: 1},
+    {tag: "BINOP", op: "+"},
+    {tag: "LDC", value: 42},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+
+    // int b = ...
+    {tag: "DECL", var: {name:"b", ty: int}},
+
+    // a[1] ==> *(a + 1)
+    {tag: "LDS", name:"a"},
+    {tag: "LDC", value: 1},
+    {tag: "BINOP", op: "+"},
+    {tag: "UNOP", op: "*"},
+    // int b = a[1]
+    {tag: "ASSIGN"},
+]
+
+test_vm("arr_1d", arr_1d, 42)

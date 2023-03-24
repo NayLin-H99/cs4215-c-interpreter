@@ -171,6 +171,11 @@ const microcode : Record<string, Function> =  {
         let o2 = pop(OS)
         let o1= pop(OS)
         const op = instr.op
+
+        // if operand is array, convert them to qualified pointers
+        if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
+        if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
+
         if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
             // POINTER ARITHMETICS
 

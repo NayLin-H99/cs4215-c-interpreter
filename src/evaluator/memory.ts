@@ -156,7 +156,10 @@ export function deref(opr: operand) : lvalue {
     let value : number = 
         opr.tag === "lvalue" ? read_as(opr.ty)(opr.value) : opr.value
     
-    const ty = opr.ty.typename === "pointer" ? opr.ty.type : opr.ty
+    const ty = 
+        opr.ty.typename === "pointer" ? opr.ty.type :  // if *ty, deref to ty
+        opr.ty.typename === "arr" ? opr.ty.ty : opr.ty // if ty[], deref to ty
+        
     return lvalue(value, ty)
 }
 

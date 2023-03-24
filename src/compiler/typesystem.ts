@@ -40,7 +40,7 @@ export function get_ty_size(ty : ty) : number {
     if (ty.typename === "pointer") return 8;
     if (ty.typename === "arr") {
         if (ty.n_elems === undefined) return 8;
-        else return get_ty_size(ty.ty) * ty.n_elems, 8
+        else return get_ty_size(ty.ty) * ty.n_elems
     }
     if (ty.typename === "struct") {
         return ty.fields.map(get_ty_size).reduce((a,b)=>a+b, 0)
