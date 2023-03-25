@@ -22,8 +22,7 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
             instrs = [
                 ...instrs,
                 {tag:"DECL", var: { name: varname, ty: type }},
-                ...(init ? init : []),
-                {tag: "ASSIGN"},
+                ...(init ? [...init, {tag: "ASSIGN"}] : []),
                 {tag: "POP"},
             ]
         }
@@ -172,17 +171,15 @@ function handle_directDeclarator(root: any, type: any) : decl {
     } else if (root.declarator && root.declarator()) {
         return handle_declarator(root.declarator(), type)
     } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {   
-        console.log("Declaring an array")     
         const val = handle_directDeclarator(root.directDeclarator(), type)
-        console.log(val)
-        const num: number = +get_text(root.children[2])
-        console.log(num)
+        const num: number = parseInt(get_text(root.children[2]))
+        if (num < 0) throw Error("Negative size for arrays declaration")
         const upd_type: ty = {typename: "arr", ty: val.type, n_elems: num}
-        console.log(upd_type)
-        return {
+        let test = {
             type: upd_type,
             varname: val.varname
         }
+        return test
     } else if (root.directDeclarator() && get_text(root.children[1]) === '(') {
         const varname = get_text(root.directDeclarator())
         let params = undefined

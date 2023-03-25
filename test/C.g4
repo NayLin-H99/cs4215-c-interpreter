@@ -236,7 +236,7 @@ directDeclarator
     |   '(' declarator ')'
     // |   directDeclarator '[' constantExpression? ']'
     // |   directDeclarator '[' DigitSequence? ']'
-    |   directDeclarator '[' DigitSequence ']'
+    |   directDeclarator '[' Constant ']'
     |   directDeclarator '(' parameterList? ')'
     // |   directDeclarator '(' parameterList ')'
     // |   directDeclarator '(' identifierList? ')' // this is not used?

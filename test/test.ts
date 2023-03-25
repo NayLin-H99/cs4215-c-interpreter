@@ -371,9 +371,47 @@ let void_function_test = [
 test_vm("void_function_test", void_function_test, 10);
 
 
-// let arr_test = [
-//     ...parse_and_compile("int a[5]; a[1] = 42; int b = a[1];"),
-//     {tag: "LDS", name: "a"},
+let arr_test = [
+    ...parse_and_compile("int a[5]; a[1] = 42; int b = a[1];"),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("arr_test", arr_test, 42)
+
+let arr_indirect_mod_test = [
+    ...parse_and_compile(`
+    int a[5];
+    int *ap = &a[4];
+    *ap = 41;
+    int b = a[4];
+    `),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("arr_indirect_mod_test", arr_indirect_mod_test, 41)
+
+let twodim_arr_test = [
+    ...parse_and_compile("int a[5][5]; a[1][2] = 42; int b = a[1][2];"),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("twodim_arr_test", twodim_arr_test, 42)
+
+// TODO: multi-dim arr
+// let comp_2dim_arr_test = [
+//     ...parse_and_compile(`
+//     int a[3][3];
+//     for (int i = 0; i < 3; i += 1) {
+//         for (int j = 0; j < 3; j += 1) {
+//             a[i][j] = i + j;
+//         }
+//     }
+//     int b = a[1][1];
+//     `),
+//     {tag: "LDS", name: "b"},
 //     {tag: "DONE"}
 // ]
-// test_vm("arr_test", arr_test, 42)
+// test_vm("comp_2dim_arr_test", comp_2dim_arr_test, 2)
+
+// TODO: void ptrs
+// TODO: types: "int" | "char" | "tvoid" | "float" | "double"

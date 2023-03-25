@@ -28,9 +28,8 @@ export default function parse_and_compile(input:string): instruction[] {
     const tokenStream = new CommonTokenStream(lexer);
     const parser = new CParser(tokenStream);
     const tree = parser.compilationUnit()
-    // console.log(get_text(tree))
-
-    print_tree(tree, 0)
+    console.log(get_text(tree))
+    // print_tree(tree, 0)
 
     compile_program(tree)
     
@@ -91,10 +90,6 @@ statement:
 externalDeclaration:
     (root: any) => {
         // functionDefinition | declaration | ';'
-        // if (!root.children) return;
-        // console.log("Reached " + get_rule_name(root))
-        // console.log(root.childCount)
-        // console.log("Going to " + get_rule_name(root.children[0]))
         compile(root.children[0])
     },
 functionDefinition:
@@ -104,13 +99,11 @@ functionDefinition:
 declaration:
     (root: any) => {
         // declarationSpecifiers initDeclaratorList? ';'
-        // console.log("Reached " + get_rule_name(root))
         instrs.push(...compile_declaration(root))
     },
 }
 
 const compile = (root: any) => {
-    // console.log(get_rule_name(root))
     return compile_comp[get_rule_name(root)](root);
 } 
 
