@@ -172,9 +172,16 @@ const microcode : Record<string, Function> =  {
         let o1= pop(OS)
         const op = instr.op
 
+
+        const is_arr = (ty:ty) => ty.typename === "arr"
+        // if one of them are array, result of binop should be lvalue.
+        const val_type = is_arr(o1.ty) || is_arr(o2.ty) ? lvalue : rvalue
+
         // if operand is array, convert them to qualified pointers
         if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
         if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
+
+        
 
         if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
             // POINTER ARITHMETICS
@@ -189,11 +196,11 @@ const microcode : Record<string, Function> =  {
             // Handle PLUS
             if (op === "+" && !is_ptr(o2.ty) && o1.ty.typename === "pointer") {
                 const v = opr_to_value(o1) + opr_to_value(o2) * get_ty_size(o1.ty.type)
-                OS.push(rvalue(v, o1.ty))
+                OS.push(val_type(v, o1.ty))
                 return;
             } else if (op === "+" && !is_ptr(o1.ty) && o2.ty.typename === "pointer") {
                 const v = opr_to_value(o2) + opr_to_value(o1) * get_ty_size(o2.ty.type)
-                OS.push(rvalue(v, o2.ty))
+                OS.push(val_type(v, o2.ty))
                 return;
             } else if (op === "+") {
                 throw Error("Invalid binop : adding 2 pointers")
@@ -214,7 +221,7 @@ const microcode : Record<string, Function> =  {
             } else {
                 const size = get_ty_size(o1.ty)
                 const v = opr_to_value(o1) - opr_to_value(o2) * size
-                OS.push(rvalue(v, o1.ty))
+                OS.push(val_type(v, o1.ty))
                 return;
             }
         }
