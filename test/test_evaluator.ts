@@ -518,13 +518,52 @@ const arr_1d = [
     // int b = ...
     {tag: "DECL", var: {name:"b", ty: int}},
 
-    // a[1] ==> *(a + 1)
+    // a[1] == a+1
     {tag: "LDS", name:"a"},
     {tag: "LDC", value: 1},
     {tag: "BINOP", op: "+"},
-    {tag: "UNOP", op: "*"},
+    
     // int b = a[1]
     {tag: "ASSIGN"},
 ]
 
 test_vm("arr_1d", arr_1d, 42)
+
+/**
+ * int a[5];
+ * int *ap = &a[4];
+ * *ap = 41;
+ * int b = a[4];
+ */
+const arr_indirect_modification = [
+    // int a[5];
+    {tag: "DECL", var: { name:"a", ty: {typename: "arr", ty: int, n_elems: 5} }},
+    {tag: "POP"},
+
+    // int *ap = &a[4];
+    {tag: "DECL", var: { name:"ap", ty: ptr(int) }},
+    {tag: "LDS", name: "a"},
+    {tag: "LDC", value: 4},
+    {tag: "BINOP", op: "+"},
+    {tag: "UNOP", op: "&"},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+    
+    // *ap = 41
+    {tag: "LDS", name: "ap"},
+    {tag: "UNOP", op: "*"},
+    {tag: "LDC", value: 41},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+    
+    // int b = a[4];
+    {tag: "DECL", var: { name:"b", ty: int }},
+    {tag: "LDS", name: "a"},
+    {tag: "LDC", value: 4},
+    {tag: "BINOP", op: "+"},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+
+    {tag: "LDS", name: "b"},
+]
+test_vm("arr_indirect_modification", arr_indirect_modification, 41)
