@@ -5,6 +5,7 @@ import { compile_stmt } from './stmt'
 import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser'
 import { instruction } from '../evaluator/evaluator'
 
+type decl = { type: ty, varname: string } & {[key in string]: any} 
 
 // helper function for declarations
 export function compile_declaration(root: DeclarationContext | ForDeclarationContext): any[] {
@@ -157,11 +158,10 @@ function handle_declarator(root: any, type: any) {
     return result
 }
 
-function handle_directDeclarator(root: any, type: any) : any {
+function handle_directDeclarator(root: any, type: any) : decl {
     // directDeclarator : Identifier 
     // | '(' declarator ')' 
-    // | directDeclarator '[' constantExpression? ']' 
-    // | directDeclarator '[' DigitSequence? ']'
+    // | directDeclarator '[' IntegerConstant ']' 
     // | directDeclarator '(' parameterList? ')'
     if (root.Identifier && root.Identifier()) {
         const varname = get_text(root.Identifier())
@@ -171,8 +171,18 @@ function handle_directDeclarator(root: any, type: any) : any {
         }
     } else if (root.declarator && root.declarator()) {
         return handle_declarator(root.declarator(), type)
-    } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {        
-        throw Error("array not supported")
+    } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {   
+        console.log("Declaring an array")     
+        const val = handle_directDeclarator(root.directDeclarator(), type)
+        console.log(val)
+        const num: number = +get_text(root.children[2])
+        console.log(num)
+        const upd_type: ty = {typename: "arr", ty: val.type, n_elems: num}
+        console.log(upd_type)
+        return {
+            type: upd_type,
+            varname: val.varname
+        }
     } else if (root.directDeclarator() && get_text(root.children[1]) === '(') {
         const varname = get_text(root.directDeclarator())
         let params = undefined
@@ -188,7 +198,7 @@ function handle_directDeclarator(root: any, type: any) : any {
     throw Error("not implemented")
 }
 
-function handle_parameterList(root: any) {
+function handle_parameterList(root: any): decl[] {
     // parameterDeclaration (',' parameterDeclaration)*
     const params = []
     for (let i = 0; i < root.childCount; i += 2) {
@@ -197,7 +207,7 @@ function handle_parameterList(root: any) {
     return params
 }
 
-function handle_parameterDeclaration(root: any) {
+function handle_parameterDeclaration(root: any): decl {
     // declarationSpecifiers declarator
     return handle_declarator(root.children[1], handle_declarationSpecifiers(root.children[0]))
 }
@@ -215,7 +225,7 @@ function handle_initializer(root: any) : instruction[] {
 
 function handle_initializerList(root: any) : instruction[] {
     // initializerList : designation? initializer (',' designation? initializer)*
-    throw Error("Struct/Array not supported");
+    throw Error("Initializer lists are not supported");
 }
 
 

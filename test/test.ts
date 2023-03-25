@@ -183,7 +183,6 @@ let continue_stmt = [
     {tag: "LDS", name: "a"},            // check a
     {tag: "DONE"}
 ]
-console.log(continue_stmt)
 test_vm("continue_stmt", continue_stmt, 3)  // check a
 
 let continue_stmt1 = [
@@ -370,3 +369,11 @@ let void_function_test = [
     {tag: "DONE"}
 ]
 test_vm("void_function_test", void_function_test, 10);
+
+
+// let arr_test = [
+//     ...parse_and_compile("int a[5]; a[1] = 42; int b = a[1];"),
+//     {tag: "LDS", name: "a"},
+//     {tag: "DONE"}
+// ]
+// test_vm("arr_test", arr_test, 42)

@@ -80,7 +80,7 @@ const compile_expr_impl : Record<string, Function> = {
         return base_expr_helper(root)
     },
     assignmentExpression: (root:any) => {
-        // conditionalExpression | Identifier assignmentOperator assignmentExpression | DigitSequence // for
+        // conditionalExpression | unaryExpression assignmentOperator assignmentExpression | DigitSequence // for
         if (root.conditionalExpression && root.conditionalExpression()) {
             return compile_expr(root.conditionalExpression());
         } else {
@@ -106,6 +106,8 @@ const compile_expr_impl : Record<string, Function> = {
         if (root.childCount === 1) return first;
     },
     unaryExpression: (root:any) => {
+        // ('++' |  '--' |  'sizeof')* 
+        // (postfixExpression | unaryOperator castExpression | ('sizeof') '(' typeName ')')
         let prefix_operations = ["++", "--", "sizeof"]
         if (prefix_operations.includes(get_text(root.children[0]))) {
             throw Error("prefix operations not implemented")
@@ -125,11 +127,19 @@ const compile_expr_impl : Record<string, Function> = {
         throw Error("Some unary expression not implemented")
     },
     postfixExpression: (root:any) => {
+        // ( primaryExpression ) 
+        // ('[' expression ']' | '(' argumentExpressionList? ')' | ('.' | '->') Identifier  | ('++' | '--') )*
         if (root.childCount === 1) return compile_expr(root.children[0])
         else if (get_text(root.children[1]) === '(') {
             return [
                 ...arg_lst_helper(root.children[2]),
                 {tag: "CALL", fname: get_text(root.children[0])}
+            ]
+        } else if (get_text(root.children[1]) === '[') {
+            return [
+                ...compile_expr(root.children[0]),
+                ...compile_expr(root.children[2]),
+                {tag: "BINOP", op: "+"}
             ]
         } else {
             throw Error("Not supported postfixExpression")
