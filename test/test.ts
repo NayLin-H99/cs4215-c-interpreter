@@ -391,27 +391,28 @@ let arr_indirect_mod_test = [
 test_vm("arr_indirect_mod_test", arr_indirect_mod_test, 41)
 
 let twodim_arr_test = [
-    ...parse_and_compile("int a[5][5]; a[1][2] = 42; int b = a[1][2];"),
+    ...parse_and_compile("int a[6][5]; a[1][2] = 42; int b = a[1][2];"),
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
+console.log(twodim_arr_test)
 test_vm("twodim_arr_test", twodim_arr_test, 42)
 
 // TODO: multi-dim arr
-// let comp_2dim_arr_test = [
-//     ...parse_and_compile(`
-//     int a[3][3];
-//     for (int i = 0; i < 3; i += 1) {
-//         for (int j = 0; j < 3; j += 1) {
-//             a[i][j] = i + j;
-//         }
-//     }
-//     int b = a[1][1];
-//     `),
-//     {tag: "LDS", name: "b"},
-//     {tag: "DONE"}
-// ]
-// test_vm("comp_2dim_arr_test", comp_2dim_arr_test, 2)
+let comp_2dim_arr_test = [
+    ...parse_and_compile(`
+    int a[3][3];
+    for (int i = 0; i < 3; i += 1) {
+        for (int j = 0; j < 3; j += 1) {
+            a[i][j] = i + j;
+        }
+    }
+    int b = a[1][1];
+    `),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("comp_2dim_arr_test", comp_2dim_arr_test, 2)
 
 // TODO: void ptrs
 // TODO: types: "int" | "char" | "tvoid" | "float" | "double"

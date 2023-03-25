@@ -5,25 +5,24 @@ import {
 import { CLexer } from '../parser/CLexer'
 import { CParser,  } from '../parser/CParser'
 
-import { get_ty_size } from './typesystem'
+import { instruction } from '../evaluator/evaluator'
 
-import { env, reset_memory_env, get_variable, get_variable_operand, enter_block, exit_block, enter_function, exit_function, print_env } from './memory'
-
+import { reset_memory_env } from './memory'
 import { compile_declaration, compile_function_defn } from './dcl'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
-import { instruction } from '../evaluator/evaluator'
-
-const file_path: string = './test/test_files/expression.c';
-// const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
-// const inputStream = CharStreams.fromString("int c = a + b;");
-
 
 export default function parse_and_compile(input:string): instruction[] {
     // reset env
     reset_memory_env();
 
+    // Read from files:
+    // const file_path: string = './test/test_files/expression.c';
+    // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
+    // const inputStream = CharStreams.fromString("int c = a + b;");    
+    // Or from string input:
     const inputStream = CharStreams.fromString(input);
+
     const lexer = new CLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
     const parser = new CParser(tokenStream);
