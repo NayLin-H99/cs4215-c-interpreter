@@ -78,7 +78,11 @@ const microcode : Record<string, Function> =  {
     },
     LDS : (instr:any) => {
         const v = get_var(instr.name)
-        OS.push(lvalue(v.address, v.ty))
+        if (v.ty.typename === "arr") {
+            OS.push(rvalue(v.address, ptr(v.ty.ty)))
+        } else {
+            OS.push(lvalue(v.address, v.ty))
+        }
     },
 
     // load the value of a symbolic instead of symbol onto stack
@@ -170,18 +174,12 @@ const microcode : Record<string, Function> =  {
         // pop in reverse order for non-commutative ops
         let o2 = pop(OS)
         let o1= pop(OS)
-        const op = instr.op
+        const op = instr.op        
 
-
-        const is_arr = (ty:ty) => ty.typename === "arr"
-        // if one of them are array, result of binop should be lvalue.
-        const val_type = is_arr(o1.ty) || is_arr(o2.ty) ? lvalue : rvalue
-
-        // if operand is array, convert them to qualified pointers
+        // if operand is array, decay them to qualified pointers
         if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
         if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
 
-        
 
         if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
             // POINTER ARITHMETICS
@@ -196,11 +194,11 @@ const microcode : Record<string, Function> =  {
             // Handle PLUS
             if (op === "+" && !is_ptr(o2.ty) && o1.ty.typename === "pointer") {
                 const v = opr_to_value(o1) + opr_to_value(o2) * get_ty_size(o1.ty.type)
-                OS.push(val_type(v, o1.ty))
+                OS.push(rvalue(v, o1.ty))
                 return;
             } else if (op === "+" && !is_ptr(o1.ty) && o2.ty.typename === "pointer") {
                 const v = opr_to_value(o2) + opr_to_value(o1) * get_ty_size(o2.ty.type)
-                OS.push(val_type(v, o2.ty))
+                OS.push(rvalue(v, o2.ty))
                 return;
             } else if (op === "+") {
                 throw Error("Invalid binop : adding 2 pointers")
@@ -221,7 +219,7 @@ const microcode : Record<string, Function> =  {
             } else {
                 const size = get_ty_size(o1.ty)
                 const v = opr_to_value(o1) - opr_to_value(o2) * size
-                OS.push(val_type(v, o1.ty))
+                OS.push(rvalue(v, o1.ty))
                 return;
             }
         }
@@ -271,7 +269,9 @@ const opr_to_value = (opr: operand) =>
 
 function print_os() {
     const os_val_str = (x:operand) => 
-        x.tag === "lvalue" ? `${x.value} => ${opr_to_value(x)}` : opr_to_value(x)
+        x.tag === "lvalue" ? `${x.value} => ${opr_to_value(x)}` : 
+        is_ptr(x.ty) ? `${opr_to_value(x)} =>` : opr_to_value(x)
+
     console.log(OS.map(os_val_str))
 }
 
@@ -334,8 +334,8 @@ export function eval_instr(instrs : any[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
-        // console.log(PC, instr)
-        // print_os()
+        console.log(PC, instr)
+        print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }

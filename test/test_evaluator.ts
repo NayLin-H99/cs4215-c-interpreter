@@ -500,17 +500,20 @@ test_vm("function_fac", function_fac, 120)
 
 /**
  * int a[5];
- * a[1] = 42;
- * int b = a[1];
+ * a[0] = 42;
+ * int b = a[0];
+ * int *c = a;
+ * *c;
  */
 const arr_1d = [
     // int a[5]
     {tag: "DECL", var: { name:"a", ty: {typename: "arr", ty: int, n_elems: 5} }},
     {tag: "POP"},
-    // a[1] == a+1
+    // a[0] == *(a+0)
     {tag: "LDS", name: "a"},
-    {tag: "LDC", value: 1},
+    {tag: "LDC", value: 0},
     {tag: "BINOP", op: "+"},
+    {tag: "UNOP", op: "*"},
     {tag: "LDC", value: 42},
     {tag: "ASSIGN"},
     {tag: "POP"},
@@ -518,13 +521,23 @@ const arr_1d = [
     // int b = ...
     {tag: "DECL", var: {name:"b", ty: int}},
 
-    // a[1] == a+1
+    // a[0] == *(a+0)
     {tag: "LDS", name:"a"},
-    {tag: "LDC", value: 1},
+    {tag: "LDC", value: 0},
     {tag: "BINOP", op: "+"},
-    
-    // int b = a[1]
+    {tag: "UNOP", op: "*"},
+
+    // int b = a[0]
     {tag: "ASSIGN"},
+    {tag: "POP"},
+
+    {tag: "DECL", var: {name:"c", ty: ptr(int)}},
+    {tag: "LDS", name:"a"},
+    {tag: "ASSIGN"},
+    {tag: "POP"},
+
+    {tag: "LDS", name:"c"},
+    {tag: "UNOP", op: "*"},
 ]
 
 test_vm("arr_1d", arr_1d, 42)
@@ -532,8 +545,8 @@ test_vm("arr_1d", arr_1d, 42)
 /**
  * int a[5];
  * int *ap = &a[4];
- * *ap = 41;
- * int b = a[4];
+ * *(ap-1) = 41;
+ * int b = a[3];
  */
 const arr_indirect_modification = [
     // int a[5];
@@ -545,22 +558,26 @@ const arr_indirect_modification = [
     {tag: "LDS", name: "a"},
     {tag: "LDC", value: 4},
     {tag: "BINOP", op: "+"},
+    {tag: "UNOP", op: "*"},
     {tag: "UNOP", op: "&"},
     {tag: "ASSIGN"},
     {tag: "POP"},
     
-    // *ap = 41
+    // *(ap-1) = 41
     {tag: "LDS", name: "ap"},
+    {tag: "LDC", value: 1},
+    {tag: "BINOP", op: "-"},
     {tag: "UNOP", op: "*"},
     {tag: "LDC", value: 41},
     {tag: "ASSIGN"},
     {tag: "POP"},
     
-    // int b = a[4];
+    // int b = a[3];
     {tag: "DECL", var: { name:"b", ty: int }},
     {tag: "LDS", name: "a"},
-    {tag: "LDC", value: 4},
+    {tag: "LDC", value: 3},
     {tag: "BINOP", op: "+"},
+    {tag: "UNOP", op: "*"},
     {tag: "ASSIGN"},
     {tag: "POP"},
 

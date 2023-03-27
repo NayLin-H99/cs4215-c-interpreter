@@ -372,11 +372,19 @@ test_vm("void_function_test", void_function_test, 10);
 
 
 let arr_test = [
-    ...parse_and_compile("int a[5]; a[1] = 42; int b = a[1];"),
+    ...parse_and_compile("int a[5]; a[0] = 42; int b = a[0];"),
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
 test_vm("arr_test", arr_test, 42)
+
+
+let arr_test_2 = [
+    ...parse_and_compile("int a[5]; a[0] = 43; int b = a[0]; int *c = a; int d = *c;"),
+    {tag: "LDS", name: "d"},
+    {tag: "DONE"}
+]
+test_vm("arr_test_2", arr_test_2, 43)
 
 let arr_indirect_mod_test = [
     ...parse_and_compile(`
@@ -413,6 +421,27 @@ let comp_2dim_arr_test = [
     {tag: "DONE"}
 ]
 test_vm("comp_2dim_arr_test", comp_2dim_arr_test, 2)
+
+let comp_2dim_arr_test_2 = [
+    ...parse_and_compile(`
+    int a[3][3];
+    for (int i = 0; i < 3; i += 1) {
+        for (int j = 0; j < 3; j += 1) {
+            a[i][j] = i + j;
+        }
+    }
+    int sum = 0;
+    for (int i = 0; i < 3; i += 1) {
+        for (int j = 0; j < 3; j += 1) {
+            sum += a[i][j];
+        }
+    }
+    
+    `),
+    {tag: "LDS", name: "sum"},
+    {tag: "DONE"}
+]
+test_vm("comp_2dim_arr_test_2", comp_2dim_arr_test_2, 18)
 
 // TODO: void ptrs
 // TODO: types: "int" | "char" | "tvoid" | "float" | "double"

@@ -147,7 +147,8 @@ const compile_expr_impl : Record<string, Function> = {
             for (let i = root.childCount - 2; i > 0; i -= 3) {
                 instrs.push(
                     ...compile_expr(root.children[i]),
-                    {tag: "BINOP", op: "+"}
+                    {tag: "BINOP", op: "+"},
+                    {tag: "UNOP", op: "*"}
                 )
             }
             return instrs

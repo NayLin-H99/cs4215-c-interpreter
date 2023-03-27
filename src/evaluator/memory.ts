@@ -1,4 +1,4 @@
-import {get_ty_size, tvoid, ty, ptr} from "../compiler/typesystem"
+import {get_ty_size, tvoid, ty, ptr, int} from "../compiler/typesystem"
 
 // MEMORY MODEL
 const HEAP_SIZE = 1000000 * 8
@@ -113,6 +113,14 @@ export function declare_variable(name:string, ty:ty) : number {
     cur_frame.push(dcl)
     
     free += get_ty_size(ty);
+
+    
+    // if (ty.typename === "arr") { 
+    //     free += 8; 
+    //     // if array, first index is for storing array variable address.
+    //     write_as(int)(dcl.address, dcl.address+8)
+    // }
+
     return dcl.address
 }
 
