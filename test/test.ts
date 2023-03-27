@@ -1,6 +1,7 @@
 import { parse } from "path";
-import parse_and_compile from "../src/compiler/compiler"
+import parse_and_compile from "../src/compiler/compiler";
 import { test_vm } from "../src/evaluator/evaluator";
+import * as fs from 'fs';
 
 let basic_assignment = [
     ...parse_and_compile("int a = 10; int b = 3 + a * 2 + 7;"),
@@ -403,10 +404,8 @@ let twodim_arr_test = [
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-console.log(twodim_arr_test)
 test_vm("twodim_arr_test", twodim_arr_test, 42)
 
-// TODO: multi-dim arr
 let comp_2dim_arr_test = [
     ...parse_and_compile(`
     int a[3][3];
@@ -445,3 +444,21 @@ test_vm("comp_2dim_arr_test_2", comp_2dim_arr_test_2, 18)
 
 // TODO: void ptrs
 // TODO: types: "int" | "char" | "tvoid" | "float" | "double"
+function get_str_from_file_name(file_name: string) : string {
+    // Example file path to test files:
+    return fs.readFileSync('./test/test_files/' + file_name, 'utf8')
+}
+
+let mat_mul_no_func_test = [
+    ...parse_and_compile(get_str_from_file_name('matmulnofunc.c')),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("mat_mul_no_func_test", mat_mul_no_func_test, 1)
+
+// let mat_mul_test = [
+//     ...parse_and_compile(get_str_from_file_name('matmul.c')),
+//     {tag: "LDS", name: "a"},
+//     {tag: "DONE"}
+// ]
+// test_vm("mat_mul_test", mat_mul_test, 1)

@@ -334,8 +334,8 @@ export function eval_instr(instrs : any[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
-        console.log(PC, instr)
-        print_os()
+        // console.log(PC, instr)
+        // print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }

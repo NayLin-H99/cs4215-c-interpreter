@@ -16,11 +16,6 @@ export default function parse_and_compile(input:string): instruction[] {
     // reset env
     reset_memory_env();
 
-    // Read from files:
-    // const file_path: string = './test/test_files/expression.c';
-    // const inputStream = CharStreams.fromString(fs.readFileSync(file_path, 'utf8'));
-    // const inputStream = CharStreams.fromString("int c = a + b;");    
-    // Or from string input:
     const inputStream = CharStreams.fromString(input);
 
     const lexer = new CLexer(inputStream);

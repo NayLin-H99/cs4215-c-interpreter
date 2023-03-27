@@ -18,7 +18,6 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
         let results = handle_initDeclaratorList(root.initDeclaratorList(), typedecl.type)
         for (let result of results) {
             const {varname, type} = result;
-            console.log(type)
             const init = result.instrs;
             instrs = [
                 ...instrs,
