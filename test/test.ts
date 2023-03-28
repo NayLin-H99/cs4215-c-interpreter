@@ -456,9 +456,9 @@ let mat_mul_no_func_test = [
 ]
 test_vm("mat_mul_no_func_test", mat_mul_no_func_test, 1)
 
-// let mat_mul_test = [
-//     ...parse_and_compile(get_str_from_file_name('matmul.c')),
-//     {tag: "LDS", name: "a"},
-//     {tag: "DONE"}
-// ]
-// test_vm("mat_mul_test", mat_mul_test, 1)
+let mat_mul_test = [
+    ...parse_and_compile(get_str_from_file_name('matmul.c')),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("mat_mul_test", mat_mul_test, 4)

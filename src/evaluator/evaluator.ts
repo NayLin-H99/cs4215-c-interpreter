@@ -132,11 +132,12 @@ const microcode : Record<string, Function> =  {
         const fdecl = get_fdecl(fname)
         // save environment context
         enter_function(PC)
-
         fdecl.params.forEach((p,i) => {
             const v = opr_to_value(pop(OS))
             const ty = fdecl.param_ty[i]
-            binds(p, ty, v)
+            binds(p, 
+                ty.typename === "arr" ? ptr(ty.ty) : ty,  // decay array function param to pointer
+                v)
         })
         PC = fdecl.address
     },

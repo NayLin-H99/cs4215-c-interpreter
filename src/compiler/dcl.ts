@@ -42,9 +42,10 @@ export function compile_function_defn(root: FunctionDefinitionContext): any[] {
     const ret_type = handle_declarationSpecifiers(root.declarationSpecifiers())
     const decl = handle_declarator(root.declarator(), ret_type.type)  // return type, varname and params
     const params: any[] = [], param_ty: any[] = []
+    
     decl.params.forEach((p: any) => {
         params.push(p.varname)
-        param_ty.push(p.type.type)
+        param_ty.push(p.type)
     })
     const cmpd_stmt = compile_stmt(root.compoundStatement())
     return [
@@ -112,7 +113,7 @@ function handle_type_words(root: any) : ty {
 }
 
 /******************************** DCL LST *************************************/
-function handle_initDeclaratorList(root: any, type: any) {
+function handle_initDeclaratorList(root: any, type: ty) {
     // initDeclaratorList : initDeclarator (',' initDeclarator)*
 
     let results = [];
@@ -123,7 +124,7 @@ function handle_initDeclaratorList(root: any, type: any) {
     return results
 }
 
-function handle_initDeclarator(root: any, type: any) {
+function handle_initDeclarator(root: any, type: ty) {
     // initDeclarator : declarator ('=' initializer)?
     const result = handle_declarator(root.declarator(), type);
     
@@ -136,7 +137,7 @@ function handle_initDeclarator(root: any, type: any) {
     return result
 }
 
-function handle_declarator(root: any, type: any) {
+function handle_declarator(root: any, type: ty) {
     // declarator : pointer? directDeclarator
 
     let result = undefined;
@@ -157,7 +158,7 @@ function handle_declarator(root: any, type: any) {
     return result
 }
 
-function handle_directDeclarator(root: any, type: any) : decl {
+function handle_directDeclarator(root: any, type: ty) : decl {
     // directDeclarator : Identifier 
     // | '(' declarator ')' 
     // | directDeclarator '[' IntegerConstant ']' 
@@ -206,7 +207,8 @@ function handle_parameterList(root: any): decl[] {
 
 function handle_parameterDeclaration(root: any): decl {
     // declarationSpecifiers declarator
-    return handle_declarator(root.children[1], handle_declarationSpecifiers(root.children[0]))
+    const ty = handle_declarationSpecifiers(root.children[0]).type;
+    return handle_declarator(root.children[1], ty)
 }
 
 /********************************** RHS ***************************************/

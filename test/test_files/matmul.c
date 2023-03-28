@@ -25,6 +25,7 @@ void multiplyMatrices(int first[3][2],
             }
         }
     }
+    return;
 }
 
 int first[3][2], second[2][3], result[3][3];
@@ -39,4 +40,5 @@ for (int i = 0; i < 2; i += 1)
 
 // multiply two matrices.
 multiplyMatrices(first, second, result, r1, c1, r2, c2);
+int a = result[2][2];
 
