@@ -61,6 +61,9 @@ const builtin : Record<string, [Function, number, ty]> = {
         stdout_buf +=  s + '\n'
         console.log(s)
     }, 1, tvoid],
+
+    // simulate doing nothing. or else need to implement allocator logic
+    free: [(x:any)=>{}, 1, tvoid] 
 }
 
 const microcode : Record<string, Function> =  {

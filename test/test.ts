@@ -564,3 +564,12 @@ let printing_test_3 = [
     `)
 ]
 test_vm("printing_test_3", printing_test_3, 0, "422\n")
+
+let malloc_free_test = parse_and_compile(`
+    int *a = malloc(24);
+    free(a);
+    int b = 5;
+    print(b);
+`) 
+test_vm("malloc_free_test", malloc_free_test, 0, "5\n")
+    
