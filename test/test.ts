@@ -523,3 +523,17 @@ let repl_test = [
     ]
 ]
 test_repl("repl_test", repl_test, [undefined, undefined, 15])
+
+let show_stack_reuse = [
+    ...parse_and_compile(`
+        int add(int a, int b) {
+            return a + b;
+        }
+        int a = add(1, 2);
+        int b = add(a, a);
+        int c = add(a, b);
+    `),
+    {tag: "LDS", name:"c"},
+    {tag: "DONE"}
+]
+test_vm("show_stack_reuse", show_stack_reuse, 9);

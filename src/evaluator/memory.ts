@@ -39,11 +39,13 @@ let fctx : Record<string, fdecl> = {}
 
 // void *free
 let free : number
+let sp : number
 
 export let OS : operand[] = []
 
 export function init_memory() {
-    free = 2000 
+    free = 0
+    sp = HEAP_SIZE - 0x20
     OS = []
     HEAP = new ArrayBuffer(HEAP_SIZE)
     env = [[]]
@@ -111,11 +113,11 @@ export function get_fdecl(name: string) {
 export function declare_variable(name:string, ty:ty) : number {
     const cur_frame = env[env.length-1];
     if(cur_frame.find(x => x.name === name)) throw Error("Redeclaration of variable " + name)
-    const dcl : dcl = {name, ty, address:free}
-    cur_frame.push(dcl)
-    
-    free += get_ty_size(ty);
+    sp -= get_ty_size(ty);
 
+    // console.log(name, sp)
+    const dcl : dcl = {name, ty, address:sp}
+    cur_frame.push(dcl)
     
     // if (ty.typename === "arr") { 
     //     free += 8; 
@@ -191,24 +193,20 @@ let RTS : any[] = []
 // ON CALL
 export function enter_function(ret_addr: number) {
     // save context
-    RTS.push([env, ret_addr])
+    RTS.push([env, ret_addr, sp])
     // frame_0 : global frame. frame_1 : param frame
     env = [env[0], []]
 }
 
 export function binds(name:string, ty: ty, value:number) {
-    const cur_frame = env[env.length-1];
-    if(cur_frame.find(x => x.name === name)) throw Error("Redeclaration of variable " + name)
-    const dcl : dcl = {name, ty, address:free}
-    write_as(dcl.ty)(dcl.address, value)
-    cur_frame.push(dcl)
-    
-    free += get_ty_size(ty);
+    const addr = declare_variable(name, ty);
+    write_as(ty)(addr, value)
 }
 
 // ON RETURN
 export function exit_function() : number {
-    const [e, p] = RTS.pop()
+    const [e, p, s] = RTS.pop()
     env = e
+    sp = s
     return p
 }
