@@ -454,6 +454,59 @@ let mat_mul_no_func_test = [
 ]
 test_vm("mat_mul_no_func_test", mat_mul_no_func_test, 1)
 
+let func_arr_param_test = [
+    ...parse_and_compile(`
+    void modify(int arr[2][3], int i, int j, int v) {
+        arr[i][j] = v;
+        return;
+    }
+    int arr[2][3];
+    modify(arr, 1, 2, 42);
+    int a = arr[1][2];
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("func_arr_param_test", func_arr_param_test, 42)
+
+let func_arr_param_test_2 = [
+    ...parse_and_compile(`
+    void modify(int i, int j, int v, int arr[2][3]) {
+        arr[i][j] = v;
+        return;
+    }
+    int arr[2][3];
+    modify(1, 2, 41, arr);
+    int a = arr[1][2];
+    `),
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("func_arr_param_test_2", func_arr_param_test_2, 41)
+
+let arr_simple_deref = [
+    ...parse_and_compile(`
+        int a[5];
+        *a = 51;
+        int b = a[0];
+    `),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("arr_simple_deref", arr_simple_deref, 51)
+
+let arr_deref_test = [
+    ...parse_and_compile(`
+        int a[3][2];
+        *a[1] = 5; //a[1][0] == 5
+        int b = a[1][0];
+    `),
+    {tag: "LDS", name: "b"},
+    {tag: "DONE"}
+]
+test_vm("arr_deref_test", arr_deref_test, 5)
+
+
 let mat_mul_test = [
     ...parse_and_compile(get_str_from_file_name('matmul.c')),
     {tag: "LDS", name: "a"},

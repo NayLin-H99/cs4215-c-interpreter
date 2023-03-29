@@ -6,6 +6,8 @@ const HEAP_SIZE = 1000000 * 8
 const LITTLE_ENDIAN = true;
 
 export let HEAP = new ArrayBuffer(HEAP_SIZE)
+
+
 const HEAP_VIEW = new DataView(HEAP)
 
 type lvalue = {
@@ -41,7 +43,7 @@ let free : number
 export let OS : operand[] = []
 
 export function init_memory() {
-    free = 0
+    free = 2000 
     OS = []
     HEAP = new ArrayBuffer(HEAP_SIZE)
     env = [[]]
