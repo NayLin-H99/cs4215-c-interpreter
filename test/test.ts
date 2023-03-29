@@ -509,7 +509,7 @@ test_vm("arr_deref_test", arr_deref_test, 5)
 let arr_addr_of_test = [
     ...parse_and_compile(`
         int a[5];
-        a[0] = 123;
+        *a = 123;
         int *b = &a;
         int c = *b;
     `),
@@ -517,6 +517,17 @@ let arr_addr_of_test = [
     {tag: "DONE"}
 ]
 test_vm("arr_addr_of_test", arr_addr_of_test, 123)
+
+let arr_addr_of_test_2 = [
+    ...parse_and_compile(`
+        int a[5];
+        *a = 124;
+        int c = *a;
+    `),
+    {tag: "LDS", name: "c"},
+    {tag: "DONE"}
+]
+test_vm("arr_addr_of_test_2", arr_addr_of_test_2, 124)
 
 let mat_mul_test = [
     ...parse_and_compile(get_str_from_file_name('matmul.c')),
