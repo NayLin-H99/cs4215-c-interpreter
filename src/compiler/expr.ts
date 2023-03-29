@@ -64,7 +64,8 @@ const arg_lst_helper = (root: any) : instruction[] => {
     // argumentExpressionList: assignmentExpression (',' assignmentExpression)*
     const instrs: any = []
     if (!root) return instrs
-    for (let i = 0; i < root.childCount; i += 2) {
+    // should handle the args in reversed order
+    for (let i = root.childCount - 1; i >= 0; i -= 2) {
         instrs.push(...compile_expr(root.children[i]))
     }
     return instrs
