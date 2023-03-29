@@ -506,6 +506,17 @@ let arr_deref_test = [
 ]
 test_vm("arr_deref_test", arr_deref_test, 5)
 
+let arr_addr_of_test = [
+    ...parse_and_compile(`
+        int a[5];
+        a[0] = 123;
+        int *b = &a;
+        int c = *b;
+    `),
+    {tag: "LDS", name: "c"},
+    {tag: "DONE"}
+]
+test_vm("arr_addr_of_test", arr_addr_of_test, 123)
 
 let mat_mul_test = [
     ...parse_and_compile(get_str_from_file_name('matmul.c')),

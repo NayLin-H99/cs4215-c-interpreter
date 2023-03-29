@@ -129,11 +129,15 @@ function handle_initDeclarator(root: any, type: ty): decl {
     const result = handle_declarator(root.declarator(), type);
     if (root.childCount > 1) {
         let instrs = handle_initializer(root.initializer(), result.type);
-        let base_type = type;
-        while (base_type.typename === "arr") {
-            base_type = base_type.ty
+
+        
+        if (result.type.typename === "arr") {
+            let base_type : ty = result.type;
+            while (base_type.typename === "arr") {
+                base_type = base_type.ty
+            }
+            instrs = [{tag:"UNOP", op: "&"}, {tag: "CAST", ty: ptr(base_type)}, ...instrs]
         }
-        instrs = [{tag: "UNOP", op: "&"}, {tag: "CAST", ty: ptr(base_type)}, ...instrs]
 
         let idx = 0
         for (let i = 0; i < instrs.length; i++) {

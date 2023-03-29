@@ -90,11 +90,11 @@ const microcode : Record<string, Function> =  {
     },
     LDS : (instr:any) => {
         const v = get_var(instr.name)
-        if (v.ty.typename === "arr") {
-            OS.push(rvalue(v.address, ptr(v.ty.ty)))
-        } else {
+        // if (v.ty.typename === "arr") {
+        //     OS.push(rvalue(v.address, ptr(v.ty.ty)))
+        // } else {
             OS.push(lvalue(v.address, v.ty))
-        }
+        // }
     },
 
     // load the value of a symbolic instead of symbol onto stack
@@ -144,7 +144,14 @@ const microcode : Record<string, Function> =  {
         // save environment context
         enter_function(PC)
         fdecl.params.forEach((p,i) => {
-            const v = opr_to_value(pop(OS))
+            let val_op = pop(OS)
+            // decay val_op as arr is used as expression
+            if (val_op.ty.typename === "arr") {
+                val_op = rvalue(val_op.value, ptr(val_op.ty.ty))
+            }
+
+            const v = opr_to_value(val_op)
+
             const ty = fdecl.param_ty[i]
             binds(p, 
                 ty.typename === "arr" ? ptr(ty.ty) : ty,  // decay array function param to pointer
@@ -163,7 +170,13 @@ const microcode : Record<string, Function> =  {
     },
 
     ASSIGN: (instr:any) => {
-        const val_op = pop(OS);
+        let val_op = pop(OS);
+
+        // decay val_op as arr is used as expression
+        if (val_op.ty.typename === "arr") {
+            val_op = rvalue(val_op.value, ptr(val_op.ty.ty))
+        }
+
         const var_op = pop(OS);
         
         assign_variable(var_op, val_op);
@@ -247,8 +260,15 @@ const microcode : Record<string, Function> =  {
 
     UNOP: (instr:any) => {
         let o = pop(OS)
-        if (o.ty.typename === "arr") o = rvalue(o.value, ptr(o.ty.ty))
         const op = instr.op
+
+        // C std 6.3.2.1.3
+        // Except when it is the operand of the sizeof operator or the unary & operator, or is a
+        // string literal used to initialize an array, an expression that has type ‘‘array of type’’ is
+        // converted to an expression with type ‘‘pointer to type’’ that points to the initial element of
+        // the array object and is not an lvalue. 
+        if (o.ty.typename === "arr" && op != "&") o = rvalue(o.value, ptr(o.ty.ty))
+        
         const result = apply_unop[op](o)
         OS.push(result)
     },
@@ -353,8 +373,8 @@ export function eval_instr(instrs : any[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
-        console.log(PC, instr)
-        print_os()
+        // console.log(PC, instr)
+        // print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }
