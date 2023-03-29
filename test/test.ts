@@ -537,3 +537,30 @@ let show_stack_reuse = [
     {tag: "DONE"}
 ]
 test_vm("show_stack_reuse", show_stack_reuse, 9);
+
+let printing_test = [
+    ...parse_and_compile(`
+        int a = 420;
+        print(a);
+    `)
+]
+test_vm("printing_test", printing_test, 0, "420\n")
+
+let printing_test_2 = [
+    ...parse_and_compile(`
+        int a = 420;
+        print(a);
+        a += 1;
+        print(a);
+    `)
+]
+test_vm("printing_test_2", printing_test_2, 0, "420\n421\n")
+
+let printing_test_3 = [
+    ...parse_and_compile(`
+        int arr[3][2];
+        arr[1][1] = 422;
+        print(arr[1][1]);
+    `)
+]
+test_vm("printing_test_3", printing_test_3, 0, "422\n")

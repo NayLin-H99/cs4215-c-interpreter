@@ -52,12 +52,15 @@ const pop = (stack:operand[]) : operand =>  {
     return result
 }
 
-const builtin : Record<string, Function> = {
-    malloc: allocate
-}
+let stdout_buf : string = ""
 
-const builtin_arity : Record<string, number> = {
-    malloc: 1
+const builtin : Record<string, [Function, number, ty]> = {
+    malloc: [allocate, 1, ptr(tvoid)],
+    print: [(x:any) => {
+        const s = JSON.stringify(x)
+        stdout_buf +=  s + '\n'
+        console.log(s)
+    }, 1, tvoid],
 }
 
 const microcode : Record<string, Function> =  {
@@ -118,13 +121,12 @@ const microcode : Record<string, Function> =  {
     CALL: (instr:any) => {
         const {fname} = instr
         if (fname in builtin) {
-            const n_args = builtin_arity[fname]
-            const fn = builtin[fname]
+            const [fn, n_args, rty] = builtin[fname]
             let args : any[] = []
             for (let i=0; i<n_args; i++) {
                 args.push(opr_to_value(pop(OS)))
             }
-            OS.push(rvalue(fn(...args), int))
+            OS.push(rvalue(fn(...args), rty))
             return
         }
 
@@ -262,6 +264,7 @@ let PC = 0;
 
 function init_vm() {
     init_memory();
+    stdout_buf = ""
     running_code = []
     PC = 0;
 }
@@ -297,10 +300,13 @@ export function run_vm(instrs:any[], debug:boolean = false) {
     return result === undefined ? 0 : opr_to_value(result)
 }
 
-export function test_vm(name: string, instrs:any[], expected:number) {
+export function test_vm(name: string, instrs:any[], expected:number, expected_std: string | undefined = undefined) {
     init_vm()
     const result = run_vm(instrs)
     if (result === expected) {
+        if (expected_std && stdout_buf !== expected_std) {
+            throw Error(`${name} Failed, expected ${expected_std} Got ${stdout_buf}`)
+        }
         console.log(`${name} : Success`)
         return
     }
