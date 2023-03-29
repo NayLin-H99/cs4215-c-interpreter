@@ -171,16 +171,12 @@ function handle_directDeclarator(root: any, type: ty) : decl {
         }
     } else if (root.declarator && root.declarator()) {
         return handle_declarator(root.declarator(), type)
-    } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {   
-        const val = handle_directDeclarator(root.directDeclarator(), type)
+    } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {
         const num: number = parseInt(get_text(root.children[2]))
         if (num < 0) throw Error("Negative size for arrays declaration")
-        const upd_type: ty = {typename: "arr", ty: val.type, n_elems: num}
-        let test = {
-            type: upd_type,
-            varname: val.varname
-        }
-        return test
+        const upd_type: ty = {typename: "arr", ty: type, n_elems: num}   
+        const val = handle_directDeclarator(root.directDeclarator(), upd_type)
+        return val
     } else if (root.directDeclarator() && get_text(root.children[1]) === '(') {
         const varname = get_text(root.directDeclarator())
         let params = undefined

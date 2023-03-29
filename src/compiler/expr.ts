@@ -139,19 +139,19 @@ const compile_expr_impl : Record<string, Function> = {
         } else if (get_text(root.children[1]) === '[') {
             // _ [ _ ] [ _ ] ...
             let instrs = compile_expr(root.children[0])
-            // for (let i = 2; i < root.childCount; i += 3) {
-            //     instrs.push(
-            //         ...compile_expr(root.children[i]),
-            //         {tag: "BINOP", op: "+"}
-            //     )
-            // }
-            for (let i = root.childCount - 2; i > 0; i -= 3) {
+            for (let i = 2; i < root.childCount; i += 3) {
                 instrs.push(
                     ...compile_expr(root.children[i]),
-                    {tag: "BINOP", op: "+"},
-                    {tag: "UNOP", op: "*"}
+                    {tag: "BINOP", op: "+"}
                 )
             }
+            // for (let i = root.childCount - 2; i > 0; i -= 3) {
+            //     instrs.push(
+            //         ...compile_expr(root.children[i]),
+            //         {tag: "BINOP", op: "+"},
+            //         {tag: "UNOP", op: "*"}
+            //     )
+            // }
             return instrs
         } else {
             throw Error("Not supported postfixExpression")
