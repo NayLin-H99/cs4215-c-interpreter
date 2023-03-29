@@ -50,6 +50,7 @@ export function init_memory() {
     HEAP = new ArrayBuffer(HEAP_SIZE)
     env = [[]]
     fctx = {}
+    free_chunks = []
 }
 
 // correctness at byte level can only be guaranteed for 32 bits
@@ -82,11 +83,29 @@ const write_as = (ty: ty) => (address:number, v:number) =>
     // everything else are 8 bytes
     Number(HEAP_VIEW.setBigInt64(address, BigInt(v), LITTLE_ENDIAN))
 
+
+let free_chunks : [number, number][] = []
+
 // allocate n bytes
 export function allocate(bytes:number) {
-    const addr = free
-    free += bytes
+    let first_fit = free_chunks.find(([_, size]) => size >= bytes)
+    if (first_fit) {
+        // remove chunk from free chunks
+        free_chunks = free_chunks.filter(x => x !== first_fit)
+        return first_fit[0]
+    }
+
+    // did not find a valid chunk
+    const addr = free + 8;
+    // [size | ....rest of memory ], addr point right after size header
+    write_as(int)(addr-8, bytes)
+    free += bytes + 8;
     return addr
+}
+
+export function free_mem(addr:number) {
+    const size = read_as(int)(addr - 8)
+    free_chunks.push([addr, size])
 }
 
 // ENVIRONMENTS 

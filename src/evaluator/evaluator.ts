@@ -1,4 +1,4 @@
-import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env } from "./memory"
+import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem } from "./memory"
 import { int, ty, get_ty_size, tvoid, ptr } from "../compiler/typesystem"
 
 export type instruction = {tag:string} & {[key in string]: any} 
@@ -63,7 +63,7 @@ const builtin : Record<string, [Function, number, ty]> = {
     }, 1, tvoid],
 
     // simulate doing nothing. or else need to implement allocator logic
-    free: [(x:any)=>{}, 1, tvoid] 
+    free: [free_mem, 1, tvoid] 
 }
 
 const microcode : Record<string, Function> =  {
@@ -182,12 +182,14 @@ const microcode : Record<string, Function> =  {
         let o1= pop(OS)
         const op = instr.op        
 
+        const LOGIC_OP = ["==", "!=", ">=", ">", "<=", "<", "&&", "||"]
+
         // if operand is array, decay them to qualified pointers
         if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
         if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
 
 
-        if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
+        if ((is_ptr(o1.ty) || is_ptr(o2.ty)) && !LOGIC_OP.includes(op)) {
             // POINTER ARITHMETICS
 
             // Pointers can only add or minus

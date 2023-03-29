@@ -572,4 +572,19 @@ let malloc_free_test = parse_and_compile(`
     print(b);
 `) 
 test_vm("malloc_free_test", malloc_free_test, 0, "5\n")
+
+let pointer_comparison = parse_and_compile(`
+    int *a = malloc(24);
+    int *b = a;
+    print (a == b);
+`)
     
+test_vm("pointer_comparison", pointer_comparison, 0, "1\n")
+
+let malloc_free_malloc = parse_and_compile(`
+    int *a = malloc(24);
+    free(a);
+    int *b = malloc(24);
+    print (a == b);
+`)
+test_vm("malloc_free_malloc", malloc_free_malloc, 0, "1\n")
