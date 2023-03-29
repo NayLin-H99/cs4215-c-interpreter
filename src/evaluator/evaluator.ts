@@ -79,6 +79,12 @@ const microcode : Record<string, Function> =  {
         if (n) pop_env(n)
     },
 
+    CAST: (instr:any) => {
+        let o = pop(OS)
+        o.ty = instr.ty
+        OS.push(o)
+    },
+
     LDC : (instr:any) => {
         OS.push(rvalue(instr.value, int))
     },
@@ -347,8 +353,8 @@ export function eval_instr(instrs : any[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
-        // console.log(PC, instr)
-        // print_os()
+        console.log(PC, instr)
+        print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }

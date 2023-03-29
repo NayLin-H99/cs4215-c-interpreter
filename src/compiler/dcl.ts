@@ -1,5 +1,5 @@
 import { get_rule_name, get_text } from './compiler'
-import { ty, types } from './typesystem'
+import { ty, types, arr, ptr } from './typesystem'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
 import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser'
@@ -22,7 +22,7 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
             instrs = [
                 ...instrs,
                 {tag:"DECL", var: { name: varname, ty: type }},
-                ...(init ? [...init, {tag: "ASSIGN"}] : []),
+                ...(init ? [...init, ...(type.typename === "arr" ? [] : [{tag: "ASSIGN"}])] : []),
                 {tag: "POP"},
             ]
         }
@@ -124,12 +124,22 @@ function handle_initDeclaratorList(root: any, type: ty) {
     return results
 }
 
-function handle_initDeclarator(root: any, type: ty) {
+function handle_initDeclarator(root: any, type: ty): decl {
     // initDeclarator : declarator ('=' initializer)?
     const result = handle_declarator(root.declarator(), type);
-    
     if (root.childCount > 1) {
-        result.instrs = handle_initializer(root.initializer());
+        let instrs = handle_initializer(root.initializer(), result.type);
+        let base_type = type;
+        while (base_type.typename === "arr") {
+            base_type = base_type.ty
+        }
+        instrs = [{tag: "UNOP", op: "&"}, {tag: "CAST", ty: ptr(base_type)}, ...instrs]
+
+        let idx = 0
+        for (let i = 0; i < instrs.length; i++) {
+            if (instrs[i].tag === "ARRASSN") instrs[i] = {tag: "LDC", value: idx++}
+        }
+        result.instrs = instrs
     } else {
         // no RHS?
     }
@@ -137,7 +147,7 @@ function handle_initDeclarator(root: any, type: ty) {
     return result
 }
 
-function handle_declarator(root: any, type: ty) {
+function handle_declarator(root: any, type: ty): decl {
     // declarator : pointer? directDeclarator
 
     let result = undefined;
@@ -161,7 +171,7 @@ function handle_declarator(root: any, type: ty) {
 function handle_directDeclarator(root: any, type: ty) : decl {
     // directDeclarator : Identifier 
     // | '(' declarator ')' 
-    // | directDeclarator '[' IntegerConstant ']' 
+    // | directDeclarator '[' Constant? ']' 
     // | directDeclarator '(' parameterList? ')'
     if (root.Identifier && root.Identifier()) {
         const varname = get_text(root.Identifier())
@@ -172,9 +182,12 @@ function handle_directDeclarator(root: any, type: ty) : decl {
     } else if (root.declarator && root.declarator()) {
         return handle_declarator(root.declarator(), type)
     } else if (root.directDeclarator() && get_text(root.children[1]) === '[') {
-        const num: number = parseInt(get_text(root.children[2]))
-        if (num < 0) throw Error("Negative size for arrays declaration")
-        const upd_type: ty = {typename: "arr", ty: type, n_elems: num}   
+        let upd_type: ty = {typename: "arr", ty: type, n_elems: undefined}
+        if (root.Constant && root.Constant()) {
+            const num: number = parseInt(get_text(root.Constant()))
+            if (num < 0) throw Error("Negative size for arrays declaration")
+            upd_type.n_elems = num
+        }
         const val = handle_directDeclarator(root.directDeclarator(), upd_type)
         return val
     } else if (root.directDeclarator() && get_text(root.children[1]) === '(') {
@@ -208,19 +221,40 @@ function handle_parameterDeclaration(root: any): decl {
 }
 
 /********************************** RHS ***************************************/
-function handle_initializer(root: any) : instruction[] {
+function handle_initializer(root: any, d: ty) : instruction[] {
     // initializer : assignmentExpression | '{' initializerList ','? '}'
-    if (root.assignmentExpression) {
-        // assignmentExpression should be handled by expr handler
+    if (root.assignmentExpression && root.assignmentExpression()) {
         return compile_expr(root.assignmentExpression())
     } else {
-        return handle_initializerList(root);    
+        return handle_initializerList(root.initializerList(), d);
     }
 }
 
-function handle_initializerList(root: any) : instruction[] {
-    // initializerList : designation? initializer (',' designation? initializer)*
-    throw Error("Initializer lists are not supported");
+function handle_initializerList(root: any, d: ty) : instruction[] {
+    // since we do not support struct, we do not have designation
+    // initializerList : initializer (',' initializer)*
+    // 1 or more initializer(s)
+    if (d.typename !== "arr") throw Error("Initializer list for non-array type")
+    d.n_elems = ((root.childCount - 1) / 2) + 1
+    let instrs = []
+    for (let i = 0; i < root.childCount; i += 2) {
+        if (d.ty.typename !== "arr") {
+            instrs.push(
+                {tag: "COPY"},
+                {tag: "ARRASSN"},   // TO BE REPLACED WITH APPROPRIATE LDC
+                {tag: "BINOP", op: "+"},
+                {tag: "UNOP", op: "*"},
+                ...handle_initializer(root.children[i], d.ty),
+                {tag: "ASSIGN"},
+                {tag: "POP"}
+            )
+        } else {
+            instrs.push(...handle_initializer(root.children[i], d.ty))
+        }
+
+    }
+    return instrs
+
 }
 
 

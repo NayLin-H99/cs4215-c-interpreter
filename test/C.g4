@@ -236,7 +236,7 @@ directDeclarator
     |   '(' declarator ')'
     // |   directDeclarator '[' constantExpression? ']'
     // |   directDeclarator '[' DigitSequence? ']'
-    |   directDeclarator '[' Constant ']'
+    |   directDeclarator '[' Constant? ']'
     |   directDeclarator '(' parameterList? ')'
     // |   directDeclarator '(' parameterList ')'
     // |   directDeclarator '(' identifierList? ')' // this is not used?
@@ -291,7 +291,9 @@ initializer
     ;
 
 initializerList
-    :   designation? initializer (',' designation? initializer)*
+    // :   designation? initializer (',' designation? initializer)*
+    //  we do not support structs, no designation
+    :   initializer (',' initializer)*
     ;
 
 designation

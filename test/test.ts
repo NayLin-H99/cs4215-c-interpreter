@@ -588,3 +588,22 @@ let malloc_free_malloc = parse_and_compile(`
     print (a == b);
 `)
 test_vm("malloc_free_malloc", malloc_free_malloc, 0, "1\n")
+
+let init_lst_test_1d = parse_and_compile(`
+    int a[] = {1, 2, 3};
+    print(a[0]);
+    print(a[1]);
+    print(a[2]);
+`)
+test_vm("init_lst_test_1d", init_lst_test_1d, 0, "1\n2\n3\n")
+
+let init_lst_test_2d = parse_and_compile(`
+    int a[][] = {{1, 2, 3}, {4, 5, 6}};
+    print(a[0][0]);
+    print(a[0][1]);
+    print(a[0][2]);
+    print(a[1][0]);
+    print(a[1][1]);
+    print(a[1][2]);
+`)
+test_vm("init_lst_test_2d", init_lst_test_2d, 0, "1\n2\n3\n4\n5\n6\n")
