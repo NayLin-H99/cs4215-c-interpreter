@@ -7,14 +7,11 @@ import { CParser,  } from '../parser/CParser'
 
 import { instruction } from '../evaluator/evaluator'
 
-import { reset_memory_env } from './memory'
 import { compile_declaration, compile_function_defn } from './dcl'
-import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
 
 export default function parse_and_compile(input:string): instruction[] {
     // reset env
-    reset_memory_env();
 
     const inputStream = CharStreams.fromString(input);
 

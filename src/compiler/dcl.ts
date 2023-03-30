@@ -1,5 +1,5 @@
-import { get_rule_name, get_text } from './compiler'
-import { ty, types, arr, ptr } from './typesystem'
+import { get_text } from './compiler'
+import { ty, types, ptr } from './typesystem'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
 import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser'

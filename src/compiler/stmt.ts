@@ -1,4 +1,4 @@
-import { is_rule, get_text, get_rule_name } from './compiler'
+import { get_text, get_rule_name } from './compiler'
 import { compile_expr } from './expr';
 import { compile_declaration } from './dcl';
 import { instruction } from '../evaluator/evaluator'

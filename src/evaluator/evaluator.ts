@@ -1,4 +1,4 @@
-import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, get_var_addr, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem } from "./memory"
+import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem } from "./memory"
 import { int, ty, get_ty_size, tvoid, ptr } from "../compiler/typesystem"
 
 export type instruction = {tag:string} & {[key in string]: any} 

@@ -1,4 +1,4 @@
-import {get_ty_size, tvoid, ty, ptr, int} from "../compiler/typesystem"
+import {get_ty_size, ty, ptr, int} from "../compiler/typesystem"
 
 // MEMORY MODEL
 const HEAP_SIZE = 1000000 * 8
