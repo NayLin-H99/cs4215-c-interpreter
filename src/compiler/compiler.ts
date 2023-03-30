@@ -19,7 +19,7 @@ export default function parse_and_compile(input:string): instruction[] {
     const tokenStream = new CommonTokenStream(lexer);
     const parser = new CParser(tokenStream);
     const tree = parser.compilationUnit()
-    console.log(get_text(tree))
+    // console.log(get_text(tree))
     // print_tree(tree, 0)
 
     compile_program(tree)
