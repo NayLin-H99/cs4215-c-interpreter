@@ -529,6 +529,18 @@ let arr_addr_of_test_2 = [
 ]
 test_vm("arr_addr_of_test_2", arr_addr_of_test_2, 124)
 
+let arr_addr_of_test_3 = [
+    ...parse_and_compile(`
+        int a[5];
+        *a = 125;
+        int *b = a;
+        int c = *b;
+    `),
+    {tag: "LDS", name: "c"},
+    {tag: "DONE"}
+]
+test_vm("arr_addr_of_test_3", arr_addr_of_test_3, 125)
+
 let mat_mul_test = [
     ...parse_and_compile(get_str_from_file_name('matmul.c')),
     {tag: "LDS", name: "a"},
@@ -566,7 +578,7 @@ let printing_test = [
         print(a);
     `)
 ]
-test_vm("printing_test", printing_test, 0, "420\n")
+test_vm("printing_test", printing_test, undefined, "420\n")
 
 let printing_test_2 = [
     ...parse_and_compile(`
@@ -576,7 +588,7 @@ let printing_test_2 = [
         print(a);
     `)
 ]
-test_vm("printing_test_2", printing_test_2, 0, "420\n421\n")
+test_vm("printing_test_2", printing_test_2, undefined, "420\n421\n")
 
 let printing_test_3 = [
     ...parse_and_compile(`
@@ -585,7 +597,7 @@ let printing_test_3 = [
         print(arr[1][1]);
     `)
 ]
-test_vm("printing_test_3", printing_test_3, 0, "422\n")
+test_vm("printing_test_3", printing_test_3, undefined, "422\n")
 
 let malloc_free_test = parse_and_compile(`
     int *a = malloc(24);
@@ -593,7 +605,7 @@ let malloc_free_test = parse_and_compile(`
     int b = 5;
     print(b);
 `) 
-test_vm("malloc_free_test", malloc_free_test, 0, "5\n")
+test_vm("malloc_free_test", malloc_free_test, undefined, "5\n")
 
 let pointer_comparison = parse_and_compile(`
     int *a = malloc(24);
@@ -601,7 +613,7 @@ let pointer_comparison = parse_and_compile(`
     print (a == b);
 `)
     
-test_vm("pointer_comparison", pointer_comparison, 0, "1\n")
+test_vm("pointer_comparison", pointer_comparison, undefined, "1\n")
 
 let malloc_free_malloc = parse_and_compile(`
     int *a = malloc(24);
@@ -609,7 +621,7 @@ let malloc_free_malloc = parse_and_compile(`
     int *b = malloc(24);
     print (a == b);
 `)
-test_vm("malloc_free_malloc", malloc_free_malloc, 0, "1\n")
+test_vm("malloc_free_malloc", malloc_free_malloc, undefined, "1\n")
 
 let init_lst_test_1d = parse_and_compile(`
     int a[] = {1, 2, 3};
@@ -617,7 +629,7 @@ let init_lst_test_1d = parse_and_compile(`
     print(a[1]);
     print(a[2]);
 `)
-test_vm("init_lst_test_1d", init_lst_test_1d, 0, "1\n2\n3\n")
+test_vm("init_lst_test_1d", init_lst_test_1d, undefined, "1\n2\n3\n")
 
 let init_lst_test_2d = parse_and_compile(`
     int a[][] = {{1, 2, 3}, {4, 5, 6}};
@@ -628,4 +640,4 @@ let init_lst_test_2d = parse_and_compile(`
     print(a[1][1]);
     print(a[1][2]);
 `)
-test_vm("init_lst_test_2d", init_lst_test_2d, 0, "1\n2\n3\n4\n5\n6\n")
+test_vm("init_lst_test_2d", init_lst_test_2d, undefined, "1\n2\n3\n4\n5\n6\n")

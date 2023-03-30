@@ -311,29 +311,9 @@ function print_os() {
     console.log(OS.map(os_val_str))
 }
 
-export function run_vm(instrs:any[], debug:boolean = false) {
-    // let instr = instrs[PC]
-    // while (instr.tag != "DONE" && PC < instrs.length) {
-    //     instr = instrs[PC]
-    //     PC++;
-    //     microcode[instr.tag](instr)
-    //     if (debug) {
-    //         console.log(instr)
-    //         print_os()
-    //     }
-    // }
-    do {
-        eval_instr(instrs)
-    } while(running_code[PC] && running_code[PC].tag !== "DONE");
-
-    const result = OS.pop();
-    if (debug) print_os();
-    return result === undefined ? 0 : opr_to_value(result)
-}
-
-export function test_vm(name: string, instrs:any[], expected:number, expected_std: string | undefined = undefined) {
+export function test_vm(name: string, instrs:any[], expected:number|undefined, expected_std: string | undefined = undefined) {
     init_vm()
-    const result = run_vm(instrs)
+    const result = eval_instr(instrs) 
     if (result === expected) {
         if (expected_std && stdout_buf !== expected_std) {
             throw Error(`${name} Failed, expected ${expected_std} Got ${stdout_buf}`)
