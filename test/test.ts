@@ -636,6 +636,13 @@ let pointer_comparison = parse_and_compile(`
     
 test_vm("pointer_comparison", pointer_comparison, undefined, "1\n")
 
+let addr_deref_operator_behaviour = parse_and_compile(`
+    int a = &*123456789
+    print (a);
+`)
+test_vm("addr_deref_operator_behaviour", addr_deref_operator_behaviour, undefined, "123456789\n")
+
+
 let malloc_free_malloc = parse_and_compile(`
     int *a = malloc(24);
     free(a);

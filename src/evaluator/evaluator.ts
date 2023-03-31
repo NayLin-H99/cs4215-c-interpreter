@@ -1,5 +1,6 @@
 import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem } from "./memory"
 import { int, ty, get_ty_size, tvoid, ptr } from "../compiler/typesystem"
+import { isTryStatement } from "typescript"
 
 export type instruction = {tag:string} & {[key in string]: any} 
 
@@ -348,10 +349,29 @@ export function test_repl(name:string, instrss : any[][], expected: any[]) {
 
 
 
-let running_code : any[] = []
+let running_code : instruction[] = []
 
-export function eval_instr(instrs : any[]) {
-    running_code.push(...instrs)
+//  6.5.3.2
+// &*E == E as if no op is done.
+// &E1[E2] == E1 + E2
+// consequently, (int p = &*123456789)== (int p = 123456789)
+function remove_addr_deref(instrs: instruction[]) {
+    const is_deref = (instr: instruction) => instr.tag === "UNOP" && instr.op === "*"
+    const is_addr = (instr: instruction) => instr.tag === "UNOP" && instr.op === "&"
+
+    for (let i=1; i<instrs.length; i++) {
+        if (is_deref(instrs[i-1]) && is_addr(instrs[i])) {
+            instrs[i-1].tag = "NOP"
+            instrs[i].tag = "NOP"
+        }
+    }
+
+    return instrs.filter(x => x.tag !== "NOP")
+}
+
+export function eval_instr(instrs : instruction[]) {
+
+    running_code.push(...remove_addr_deref(instrs))
     
     while (running_code[PC] && running_code[PC].tag !== "DONE") {
         const instr = running_code[PC]
