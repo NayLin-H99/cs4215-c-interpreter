@@ -7,11 +7,23 @@
     "eslint": "eslint ."
   },
   "dependencies": {
-    "antlr4ts": "0.5.0-alpha.4",
     "@types/node": "18.14.0",
-    "antlr4ts-cli": "0.5.0-alpha.4",
     "antlr4": "^4.12.0",
+    "antlr4ts": "0.5.0-alpha.4",
+    "antlr4ts-cli": "0.5.0-alpha.4",
     "ts-node": "10.9.1",
     "typescript": "4.9.5"
-  }
+  },
+  "main": "out/index",
+  "types": "out/index",
+  "files": [
+    "out"
+  ],
+  "name": "clite",
+  "version": "1.0.0",
+  "description": "A basic c interpreter for CS4215",
+  "repository": "git@github.com:NayLin-H99/cs4215-c-interpreter.git",
+  "author": "Bailin & Nay Lin",
+  "license": "MIT",
+  "private": true
 }

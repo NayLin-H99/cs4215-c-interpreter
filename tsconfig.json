@@ -2,7 +2,7 @@
     "compilerOptions": {
         "declaration": true,
         "module": "commonjs",
-        "target": "ES2020",
+        "target": "ES2016",
         "outDir": "out",
         "removeComments": true,
         "noImplicitAny": true,
@@ -16,7 +16,8 @@
     "compileOnSave": true,
     "include": [
         "src/**/*.ts",
-        "test/**/*.ts"
+        "test/**/*.ts", 
+        "index.ts"
     ],
     "exclude": [
         "node_modules",

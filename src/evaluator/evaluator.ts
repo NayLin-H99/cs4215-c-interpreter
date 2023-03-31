@@ -54,17 +54,20 @@ const pop = (stack:operand[]) : operand =>  {
 
 let stdout_buf : string = ""
 
-const builtin : Record<string, [Function, number, ty]> = {
+// allow usage of external printer
+const create_builtin = (printer:Function) : Record<string, [Function, number, ty]> => ({
     malloc: [allocate, 1, ptr(tvoid)],
     print: [(x:any) => {
         const s = JSON.stringify(x)
         stdout_buf +=  s + '\n'
-        console.log(s)
+        printer(s)
     }, 1, tvoid],
 
     // simulate doing nothing. or else need to implement allocator logic
     free: [free_mem, 1, tvoid] 
-}
+})
+
+let builtin = create_builtin(console.log)
 
 const microcode : Record<string, Function> =  {
     // PUSH : (instr:any) => OS.push({
@@ -293,11 +296,12 @@ const microcode : Record<string, Function> =  {
 
 let PC = 0;
 
-export function init_vm() {
-    init_memory();
+export function init_vm(printer: Function) {
+    init_memory()
     stdout_buf = ""
     running_code = []
-    PC = 0;
+    PC = 0
+    builtin = create_builtin(printer)
 }
 
 const opr_to_value = (opr: operand) => 
@@ -312,7 +316,7 @@ function print_os() {
 }
 
 export function test_vm(name: string, instrs:any[], expected:number|undefined, expected_std: string | undefined = undefined) {
-    init_vm()
+    init_vm(console.log)
     const result = eval_instr(instrs) 
     if (result === expected) {
         if (expected_std && stdout_buf !== expected_std) {
@@ -327,7 +331,7 @@ export function test_vm(name: string, instrs:any[], expected:number|undefined, e
 
 // TEST REPL Loop
 export function test_repl(name:string, instrss : any[][], expected: any[]) {
-    init_vm()
+    init_vm(console.log)
     let results : any[] = []
     for (let instrs of instrss) {
         results.push(eval_instr(instrs))
