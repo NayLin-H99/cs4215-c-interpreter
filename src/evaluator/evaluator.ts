@@ -293,7 +293,7 @@ const microcode : Record<string, Function> =  {
 
 let PC = 0;
 
-function init_vm() {
+export function init_vm() {
     init_memory();
     stdout_buf = ""
     running_code = []
