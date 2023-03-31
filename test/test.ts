@@ -48,6 +48,27 @@ let if_else_statement = [
 ]
 test_vm("if_else_statement", if_else_statement, 69);
 
+let if_else_statement_2 = [
+    ...parse_and_compile("int a = 0; if (1 == 1) a = 2; else a = 69;"), 
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("if_else_statement_2", if_else_statement_2, 2);
+
+let if_else_statement_3 = [
+    ...parse_and_compile("int a = 0; if (1 == 1) {a = 2;} else {a = 69;}"), 
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("if_else_statement_3", if_else_statement_3, 2);
+
+let if_else_statement_4 = [
+    ...parse_and_compile("int a = 0; if (0) {a = 2;} else if (1) {a = 69;} else {a = 42;}"), 
+    {tag: "LDS", name: "a"},
+    {tag: "DONE"}
+]
+test_vm("if_else_statement_4", if_else_statement_4, 69);
+
 let while_statement = [
     ...parse_and_compile("int a = 0; while (a < 5) a += 1;"), 
     {tag: "LDS", name: "a"},

@@ -43,13 +43,16 @@ const if_helper = (root: any) : instruction[] => {
     const s1 = compile_stmt(root.children[4])
     let instrs =  [
         ...e,
-        {tag: "BR", true_branch: 1, false_branch: s1.length + 2 + 1},
+        {tag: "BR", true_branch: 1, false_branch: s1.length + 3 + 1},
         {tag: "ENTER_BLK"},
         ...s1,
-        {tag: "EXIT_BLK"}
+        {tag: "EXIT_BLK"},
+        {tag: "BR", jmp: 1},
     ]
+    // have else
     if (root.childCount > 5) {
         const s2 = compile_stmt(root.children[6])
+        instrs[instrs.length - 1].jmp = s2.length + 2 + 1
         instrs.push(
             {tag: "ENTER_BLK"},
             ...s2,
