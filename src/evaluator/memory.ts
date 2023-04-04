@@ -182,16 +182,12 @@ export function address_of(opr: lvalue) : rvalue {
 // indirection : *
 export function deref(opr: operand) : lvalue {
     // assume rvalue is a valid ptr, if not UB
-    if (opr.ty.typename !== "pointer" && opr.tag === "rvalue") throw Error("Can only deref pointers");
+    if (opr.ty.typename !== "pointer") throw Error("Can only deref pointers");
 
     let value : number = 
         opr.tag === "lvalue" ? read_as(opr.ty)(opr.value) : opr.value
     
-    const ty = 
-        opr.ty.typename === "pointer" ? opr.ty.type :  // if *ty, deref to ty
-        opr.ty.typename === "arr" ? opr.ty.ty : opr.ty // if ty[], deref to ty
-        
-    return lvalue(value, ty)
+    return lvalue(value, opr.ty.type)
 }
 
 export function enter_block() {
