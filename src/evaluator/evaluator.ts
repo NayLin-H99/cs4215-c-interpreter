@@ -184,7 +184,9 @@ const microcode : Record<string, Function> =  {
         const var_op = pop(OS);
         
         assign_variable(var_op, val_op);
-        OS.push(var_op)
+
+        // disallow &(a=5);
+        OS.push(rvalue(opr_to_value(var_op), var_op.ty))
     },
 
     // make another copy of what's top of the stack
