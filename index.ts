@@ -1,8 +1,8 @@
-import { eval_instr, init_vm } from "./src/evaluator/evaluator"
+import { eval_instr, init_vm, instruction } from "./src/evaluator/evaluator"
 import parse_and_compile from "./src/compiler/compiler"
 
 
-export default function interpretClite (code:string, is_init: boolean, printer:Function | undefined) {
+export default function interpretClite (code:string, is_init: boolean, printer:Function | undefined) :[number|undefined, instruction[]] {
     if(is_init) {
         if (printer) {
             init_vm(printer)

@@ -5,9 +5,6 @@ import { isTryStatement } from "typescript"
 export type instruction = {tag:string} & {[key in string]: any} 
 
 
-// the only truth
-const is_true = (n : number) => n > 0
-
 const is_ptr = (ty : ty) => ty.typename === "pointer"
 
 const apply_binop : Record<string, Function> = {
@@ -31,8 +28,8 @@ const apply_binop : Record<string, Function> = {
     ">=" : (o1:operand, o2:operand) => opr_to_value(o1) >= opr_to_value(o2) ? 1 : 0,
     "<" : (o1:operand, o2:operand) => opr_to_value(o1) < opr_to_value(o2) ? 1 : 0,
     "<=" : (o1:operand, o2:operand) => opr_to_value(o1) <= opr_to_value(o2) ? 1 : 0,
-    "&&" : (o1:operand, o2:operand) => is_true(opr_to_value(o1)) && is_true(opr_to_value(o2)) ? 1 : 0,
-    "||" : (o1:operand, o2:operand) => is_true(opr_to_value(o1)) || is_true(opr_to_value(o2)) ? 1 : 0,
+    "&&" : (o1:operand, o2:operand) => (opr_to_value(o1) && opr_to_value(o2)) ? 1 : 0,
+    "||" : (o1:operand, o2:operand) => (opr_to_value(o1) || opr_to_value(o2)) ? 1 : 0,
 }
 
 const apply_unop : Record<string, Function> = { 
@@ -41,7 +38,7 @@ const apply_unop : Record<string, Function> = {
         return address_of(o1)
     },
     "*" : deref,
-    "!" : (o1: operand) => rvalue(!is_true(opr_to_value(o1)) ? 1 : 0, o1.ty),
+    "!" : (o1: operand) => rvalue(!(opr_to_value(o1)) ? 1 : 0, o1.ty),
     "~" : (o1: operand) => rvalue(~opr_to_value(o1), o1.ty),
     "-" : (o1: operand) => rvalue(opr_to_value(o1) * -1, o1.ty),
     "+" : (o1: operand) => rvalue(opr_to_value(o1), o1.ty),
@@ -285,7 +282,7 @@ const microcode : Record<string, Function> =  {
         const {true_branch, false_branch} = instr
         if (true_branch && false_branch)
         {
-            PC += is_true(opr_to_value(pop(OS))) ?  true_branch : false_branch
+            PC += opr_to_value(pop(OS)) ?  true_branch : false_branch
         } else {
             PC += instr.jmp
         }
