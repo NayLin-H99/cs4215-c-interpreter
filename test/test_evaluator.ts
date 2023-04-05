@@ -1,5 +1,5 @@
 import exp from "constants"
-import { int, ptr } from "../src/compiler/typesystem"
+import { char, int, ptr } from "../src/compiler/typesystem"
 import { eval_instr, test_repl, test_vm } from "../src/evaluator/evaluator"
 
 
@@ -584,3 +584,35 @@ const arr_indirect_modification = [
     {tag: "LDS", name: "b"},
 ]
 test_vm("arr_indirect_modification", arr_indirect_modification, 41)
+
+// char *s = "hello";
+// print_str(s);
+const string_printing = [
+    {tag:"DECL", var: {name:"s", ty: ptr(char)}},
+    {tag:"LDSTR", str:"hello"},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag:"LDS", name: "s"},
+    {tag:"CALL", fname:"print_str"},
+    {tag:"POP"},
+]
+test_vm("string_printing", string_printing, undefined, "hello\n");
+
+// char *s = "hello";
+// char *s2 = "hello";
+// s == s2;
+const string_interning = [
+    {tag:"DECL", var: {name:"s", ty: ptr(char)}},
+    {tag:"LDSTR", str:"hello"},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag:"DECL", var: {name:"s2", ty: ptr(char)}},
+    {tag:"LDSTR", str:"hello"},
+    {tag:"ASSIGN"},
+    {tag:"POP"},
+    {tag:"LDS", name: "s"},
+    {tag:"LDS", name: "s2"},
+    {tag:"BINOP", op: "=="},
+]
+test_vm("string_interning", string_interning, 1);
+

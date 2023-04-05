@@ -1,5 +1,5 @@
-import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem } from "./memory"
-import { int, ty, get_ty_size, tvoid, ptr } from "../compiler/typesystem"
+import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem, make_string } from "./memory"
+import { int, ty, get_ty_size, tvoid, ptr, char } from "../compiler/typesystem"
 import { isTryStatement } from "typescript"
 
 export type instruction = {tag:string} & {[key in string]: any} 
@@ -53,6 +53,7 @@ const pop = (stack:operand[]) : operand =>  {
 let stdout_buf : string = ""
 
 // allow usage of external printer
+// TODO: make a nicer representation than this
 const create_builtin = (printer:Function) : Record<string, [Function, number, ty]> => ({
     malloc: [allocate, 1, ptr(tvoid)],
     print: [(x:any) => {
@@ -61,7 +62,19 @@ const create_builtin = (printer:Function) : Record<string, [Function, number, ty
         printer(s)
     }, 1, tvoid],
 
-    // simulate doing nothing. or else need to implement allocator logic
+    print_str: [(x:any) => {
+        // x should be a number address.
+        let s = ""
+        let i = 0;
+        
+        for (let c = read_as(char)(x+i); c != 0; c=read_as(char)(x+(++i))) {
+            s += String.fromCharCode(c)
+        }
+        stdout_buf += s + "\n"
+        printer(s);
+    }, 1, tvoid],
+
+    // first fit allocator 
     free: [free_mem, 1, tvoid] 
 })
 
@@ -96,6 +109,11 @@ const microcode : Record<string, Function> =  {
         // } else {
             OS.push(lvalue(v.address, v.ty))
         // }
+    },
+
+    LDSTR : (instr:any) => {
+        const s = instr.str;
+        OS.push(make_string(s))
     },
 
     // load the value of a symbolic instead of symbol onto stack
@@ -376,8 +394,8 @@ export function eval_instr(instrs : instruction[]) {
         const instr = running_code[PC]
         PC++;
         microcode[instr.tag](instr)
-        // console.log(PC, instr)
-        // print_os()
+        //console.log(PC, instr)
+        //print_os()
     }
     return OS.length > 0 ? opr_to_value(OS[OS.length-1]) : undefined
 }

@@ -7,6 +7,7 @@ export type ptr = {typename: "pointer", type: ty};
 export type ty = primitives | struct | arr | namedT | ptr;
 
 export const ptr = (ty:ty) : ptr => ({typename: "pointer", type: ty})
+export const arr = (ty:ty, n_elems:number) : arr => ({typename: "arr", ty, n_elems})
 
 export const 
     int   : primitives = {typename: "int", size: 8},

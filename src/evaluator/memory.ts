@@ -1,14 +1,28 @@
-import {get_ty_size, ty, ptr, int} from "../compiler/typesystem"
+import { write } from "fs"
+import {get_ty_size, ty, ptr, int, char, arr} from "../compiler/typesystem"
 
 // MEMORY MODEL
 const HEAP_SIZE = 1000000 * 8
+const STACK_SIZE = 1000000 * 8
+const TEXT_SIZE = 1000000 * 8
+// HEAP | STACK
+const MEM_SIZE = HEAP_SIZE + STACK_SIZE + TEXT_SIZE
+
+const READ_PERM = 1;
+const WRITE_PERM = 1;
+
+const PERMISSIONS = {
+    HEAP: READ_PERM | WRITE_PERM,
+    STACK: READ_PERM | WRITE_PERM,
+    TEXT: READ_PERM 
+}
 
 const LITTLE_ENDIAN = true;
 
-export let HEAP = new ArrayBuffer(HEAP_SIZE)
+export let MEM = new ArrayBuffer(MEM_SIZE)
 
 
-const HEAP_VIEW = new DataView(HEAP)
+const HEAP_VIEW = new DataView(MEM)
 
 type lvalue = {
     tag: "lvalue",
@@ -45,12 +59,14 @@ export let OS : operand[] = []
 
 export function init_memory() {
     free = 0
-    sp = HEAP_SIZE - 0x20
+    sp = MEM_SIZE - 0x20
     OS = []
-    HEAP = new ArrayBuffer(HEAP_SIZE)
+    MEM = new ArrayBuffer(MEM_SIZE)
     env = [[]]
     fctx = {}
     free_chunks = []
+    string_memo.clear()
+    string_free = HEAP_SIZE + STACK_SIZE
 }
 
 // correctness at byte level can only be guaranteed for 32 bits
@@ -71,17 +87,29 @@ function write_byte(address:number, value:number) {
     HEAP_VIEW.setUint8(address, value)
 }
 
+const get_segment = (address: number) => 
+    address < HEAP_SIZE ? "HEAP" :
+    address < HEAP_SIZE + STACK_SIZE ? "STACK" :
+    "TEXT"
+
+const get_perm = (address: number) => PERMISSIONS[get_segment(address)]
+
+
+// all memory are readable until mprotect / mmap is implemented
 export const read_as = (ty: ty) => (address:number) => 
     ty.typename === "char" ? HEAP_VIEW.getUint8(address) :
     ty.typename === "float" || ty.typename === "double" ? HEAP_VIEW.getFloat64(address) :
     // everything else are 8 bytes
     Number(HEAP_VIEW.getBigInt64(address, LITTLE_ENDIAN))
 
-const write_as = (ty: ty) => (address:number, v:number) => 
-    ty.typename === "char" ? HEAP_VIEW.setUint8(address, v) :
-    ty.typename === "float" || ty.typename === "double" ? HEAP_VIEW.setFloat64(address, v) :
-    // everything else are 8 bytes
-    Number(HEAP_VIEW.setBigInt64(address, BigInt(v), LITTLE_ENDIAN))
+const write_as = (ty: ty) => (address:number, v:number) => {  
+    if (!(get_perm(address) & WRITE_PERM)) throw Error("Unwritable memory in " + get_segment(address));
+    
+    return ty.typename === "char" ? HEAP_VIEW.setUint8(address, v) :
+        ty.typename === "float" || ty.typename === "double" ? HEAP_VIEW.setFloat64(address, v) :
+        // everything else are 8 bytes
+        Number(HEAP_VIEW.setBigInt64(address, BigInt(v), LITTLE_ENDIAN))
+}
 
 
 let free_chunks : [number, number][] = []
@@ -106,6 +134,27 @@ export function allocate(bytes:number) {
 export function free_mem(addr:number) {
     const size = read_as(int)(addr - 8)
     free_chunks.push([addr, size])
+}
+
+// STRINGS 
+
+let string_memo = new Map<string, number>();
+let string_free = HEAP_SIZE+STACK_SIZE
+
+// creates a string in text segment
+export function make_string(s:string) : operand{
+    const addr = string_memo.get(s);
+    if (addr) return lvalue(addr, arr(char, s.length)) 
+
+    const ret = string_free;
+    for (let i = 0; i<s.length; i++) {
+        write_as(char)(string_free+i, s.charCodeAt(i))
+    }
+    // null terminator
+    write_as(char)(string_free + s.length, 0)
+    string_free += s.length + 1
+    string_memo.set(s, ret)
+    return lvalue(ret, arr(char, s.length))
 }
 
 // ENVIRONMENTS 
