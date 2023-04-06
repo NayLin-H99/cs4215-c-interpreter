@@ -673,23 +673,11 @@ let init_lst_test_2d = parse_and_compile(`
 `)
 test_vm("init_lst_test_2d", init_lst_test_2d, undefined, "1\n2\n3\n4\n5\n6\n")
 
-// let char_arr_1d = parse_and_compile(`
-//     char s[] = {65, 65, 65};
-//     print(s[0]);
-//     print(s[1]);
-//     print(s[2]);
-// `)
-// test_vm("char_arr_1d", char_arr_1d, undefined, "65\n65\n65\n")
-
-
-// let char_arr_2d = parse_and_compile(`
-//     char s[][] = {{1, 2}, {3,4}};
-//     print(s[0][0]);
-//     print(s[0][1]);
-//     print(s[1][0]);
-//     print(s[1][1]);
-// `)
-// test_vm("char_arr_2d", char_arr_2d, undefined, "1\n2\n3\n4\n")
+let char_arr_1d = parse_and_compile(`
+    char s[] = {72, 72, 72, 00};
+    print_str(s);
+`)
+test_vm("char_arr_1d", char_arr_1d, undefined, "HHH\n")
 
 let str_test1 = parse_and_compile(`
     char *s = "hello";
@@ -710,8 +698,14 @@ let local_str_test3 = parse_and_compile(`
     s[0] = 'H';
     print_str(s);
 `)
-console.log(local_str_test3)
 test_vm("local_str_test3", local_str_test3, undefined, "Hello\n")
+
+let str_init_list_test = parse_and_compile(`
+    char s[][6] = {"hello", "world"};
+    print_str(s[0]);
+    print_str(s[1]);
+`)
+test_vm("str_init_list_test", str_init_list_test, undefined, "hello\nworld\n");
 
 let char_test1 = parse_and_compile(`
     char a = 'H';

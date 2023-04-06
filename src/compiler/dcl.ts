@@ -1,11 +1,15 @@
 import { get_text } from './compiler'
-import { ty, types, ptr } from './typesystem'
+import { ty, types, ptr, arr, char } from './typesystem'
 import { compile_expr } from './expr'
 import { compile_stmt } from './stmt'
 import { DeclarationContext, ForDeclarationContext, FunctionDefinitionContext } from '../parser/CParser'
 import { instruction } from '../evaluator/evaluator'
 
 type decl = { type: ty, varname: string } & {[key in string]: any} 
+
+
+const is_init_list_blk = (instrs: instruction[]) => 
+    instrs.filter(i => i.tag === "ARRASSN").length > 0
 
 // helper function for declarations
 export function compile_declaration(root: DeclarationContext | ForDeclarationContext): any[] {
@@ -22,7 +26,8 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
             instrs = [
                 ...instrs,
                 {tag:"DECL", var: { name: varname, ty: type }},
-                ...(init ? [...init, ...((type.typename === "arr" && typedecl.type.typename !== "char") ? [] : [{tag: "ASSIGN"}])] : []),
+                // ...(init ? [...init, ...(type.typename === "arr"  ? [] : [{tag: "ASSIGN"}])] : []),
+                ...(init ? init : []),
                 {tag: "POP"},
             ]
         }
@@ -130,22 +135,32 @@ function handle_initDeclarator(root: any, type: ty): decl {
     if (root.childCount > 1) {
         let instrs = handle_initializer(root.initializer(), result.type);
 
-        // char s[] = {72,72, 72}
-        // char s1[] = "HHH";
+        // if (type.typename === "char" && is_init_list_blk(instrs)) {
+        //     throw Error("Initializer list of char[] are not supported");
+        // }
 
-        if (result.type.typename === "arr" && type.typename != "char") {
+        if (is_init_list_blk(instrs)) {
             let base_type : ty = result.type;
-            while (base_type.typename === "arr") {
-                base_type = base_type.ty
+            // if we are dealing with whole load strings
+            if (instrs.filter(i => i.tag === "LDSTR").length > 0) {
+                // stop 1 level higher
+                while (base_type.typename === "arr" && base_type.ty.typename === "arr") {
+                    base_type = base_type.ty
+                }
+            } else {
+                while (base_type.typename === "arr") {
+                    base_type = base_type.ty
+                }
             }
 
             instrs = [{tag:"UNOP", op: "&"}, {tag: "CAST", ty: ptr(base_type)}, ...instrs]
+
+            let idx = 0
+            for (let i = 0; i < instrs.length; i++) {
+                if (instrs[i].tag === "ARRASSN") instrs[i] = {tag: "LDC", value: idx++}
+            }
         }
 
-        let idx = 0
-        for (let i = 0; i < instrs.length; i++) {
-            if (instrs[i].tag === "ARRASSN") instrs[i] = {tag: "LDC", value: idx++}
-        }
         result.instrs = instrs
     } else {
         // no RHS?
@@ -231,7 +246,8 @@ function handle_parameterDeclaration(root: any): decl {
 function handle_initializer(root: any, d: ty) : instruction[] {
     // initializer : assignmentExpression | '{' initializerList ','? '}'
     if (root.assignmentExpression && root.assignmentExpression()) {
-        return compile_expr(root.assignmentExpression())
+        let instrs = compile_expr(root.assignmentExpression())
+        return [...instrs, {tag:"ASSIGN"}]
     } else {
         return handle_initializerList(root.initializerList(), d);
     }
@@ -245,23 +261,20 @@ function handle_initializerList(root: any, d: ty) : instruction[] {
     d.n_elems = ((root.childCount - 1) / 2) + 1
     let instrs = []
     for (let i = 0; i < root.childCount; i += 2) {
-        if (d.ty.typename !== "arr") {
+        if (d.ty.typename !== "arr" || d.ty.ty.typename === "char") {
             instrs.push(
                 {tag: "COPY"},
                 {tag: "ARRASSN"},   // TO BE REPLACED WITH APPROPRIATE LDC
                 {tag: "BINOP", op: "+"},
                 {tag: "UNOP", op: "*"},
                 ...handle_initializer(root.children[i], d.ty),
-                {tag: "ASSIGN"},
                 {tag: "POP"}
             )
         } else {
             instrs.push(...handle_initializer(root.children[i], d.ty))
         }
-
     }
     return instrs
-
 }
 
 
