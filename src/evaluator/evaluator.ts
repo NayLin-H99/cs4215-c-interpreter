@@ -1,4 +1,4 @@
-import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem, make_string } from "./memory"
+import { allocate, get_var, enter_block, exit_block, rvalue, address_of, assign_variable, declare_variable, deref, init_memory, lvalue, operand, OS, read_as, get_var_value, declare_function, get_fdecl, enter_function, binds, exit_function, pop_env, free_mem, make_string, memcpy } from "./memory"
 import { int, ty, get_ty_size, tvoid, ptr, char } from "../compiler/typesystem"
 import { isTryStatement } from "typescript"
 
@@ -50,6 +50,13 @@ const pop = (stack:operand[]) : operand =>  {
     return result
 }
 
+const decayable = (opr: operand) : operand => {
+    if (opr.ty.typename === "arr") {
+        return rvalue(opr.value, ptr(opr.ty.ty))
+    }
+    return opr;
+}
+
 let stdout_buf : string = ""
 
 // allow usage of external printer
@@ -73,6 +80,8 @@ const create_builtin = (printer:Function) : Record<string, [Function, number, ty
         stdout_buf += s + "\n"
         printer(s);
     }, 1, tvoid],
+
+    memcpy: [memcpy, 3, tvoid],
 
     // first fit allocator 
     free: [free_mem, 1, tvoid] 
@@ -152,7 +161,8 @@ const microcode : Record<string, Function> =  {
             const [fn, n_args, rty] = builtin[fname]
             let args : any[] = []
             for (let i=0; i<n_args; i++) {
-                args.push(opr_to_value(pop(OS)))
+                let opr = decayable(pop(OS))
+                args.push(opr_to_value(opr))
             }
             OS.push(rvalue(fn(...args), rty))
             return
@@ -163,14 +173,9 @@ const microcode : Record<string, Function> =  {
         // save environment context
         enter_function(PC)
         fdecl.params.forEach((p,i) => {
-            let val_op = pop(OS)
             // decay val_op as arr is used as expression
-            if (val_op.ty.typename === "arr") {
-                val_op = rvalue(val_op.value, ptr(val_op.ty.ty))
-            }
-
+            let val_op = decayable(pop(OS))
             const v = opr_to_value(val_op)
-
             const ty = fdecl.param_ty[i]
             binds(p, 
                 ty.typename === "arr" ? ptr(ty.ty) : ty,  // decay array function param to pointer
@@ -189,13 +194,7 @@ const microcode : Record<string, Function> =  {
     },
 
     ASSIGN: (instr:any) => {
-        let val_op = pop(OS);
-
-        // decay val_op as arr is used as expression
-        if (val_op.ty.typename === "arr") {
-            val_op = rvalue(val_op.value, ptr(val_op.ty.ty))
-        }
-
+        let val_op = decayable(pop(OS));
         const var_op = pop(OS);
         
         assign_variable(var_op, val_op);
@@ -218,15 +217,16 @@ const microcode : Record<string, Function> =  {
         // [ o2 ]
         // [ o1 ]
         // pop in reverse order for non-commutative ops
-        let o2 = pop(OS)
-        let o1= pop(OS)
+        // if operand is array, decay them to qualified pointers
+        let o2 = decayable(pop(OS))
+        let o1= decayable(pop(OS))
         const op = instr.op        
 
         const LOGIC_OP = ["==", "!=", ">=", ">", "<=", "<", "&&", "||"]
 
-        // if operand is array, decay them to qualified pointers
-        if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
-        if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
+        
+        // if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
+        // if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
 
 
         if ((is_ptr(o1.ty) || is_ptr(o2.ty)) && !LOGIC_OP.includes(op)) {
@@ -334,7 +334,8 @@ function print_os() {
 }
 
 export function test_vm(name: string, instrs:any[], expected:number|undefined, expected_std: string | undefined = undefined) {
-    init_vm(console.log)
+    // init_vm(console.log)
+    init_vm((x: any) => {})
     const result = eval_instr(instrs) 
     if (result === expected) {
         if (expected_std && stdout_buf !== expected_std) {
@@ -349,7 +350,8 @@ export function test_vm(name: string, instrs:any[], expected:number|undefined, e
 
 // TEST REPL Loop
 export function test_repl(name:string, instrss : any[][], expected: any[]) {
-    init_vm(console.log)
+    // init_vm(console.log)
+    init_vm((x: any) => {})
     let results : any[] = []
     for (let instrs of instrss) {
         results.push(eval_instr(instrs))

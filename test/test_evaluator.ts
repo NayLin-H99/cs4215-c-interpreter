@@ -1,9 +1,10 @@
 import exp from "constants"
-import { char, int, ptr } from "../src/compiler/typesystem"
+import { arr, char, int, ptr } from "../src/compiler/typesystem"
 import { eval_instr, test_repl, test_vm } from "../src/evaluator/evaluator"
 
+console.log("==================== Running Evaluator Tests ====================")
 
-// quick helper function to genegrate basic code 
+// quick helper function to generate basic code 
 // decl_int_var_with_value("a", 10) means int a = 10;
 const decl_int_var_with_value = (name:string, value:number) => [
     {tag: "DECL", var: { name, ty: int }},
@@ -616,3 +617,26 @@ const string_interning = [
 ]
 test_vm("string_interning", string_interning, 1);
 
+// char s[] = "hello";
+// s[0] = 'H';
+// print_str(s);
+const local_string = [
+    // char s[] = "hello";
+    {tag: "DECL", var: {name: "s", ty: arr(char, 6)}},
+    {tag: "LDSTR", str:"hello"}, // src
+    {tag: "ASSIGN"},
+
+    // s[0] = 'H';
+    {tag:"LDS", name: "s"},
+    {tag: "LDC", value: 0},
+    {tag: "BINOP", op: "+"},
+    {tag: "UNOP", op: "*"}, // s[0]
+    {tag: "LDC", value: 72}, // 'H'
+    {tag: "ASSIGN"},
+
+    // print_str(s);
+    {tag:"LDS", name: "s"},
+    {tag: "CALL", fname: "print_str"}
+]
+
+test_vm("local_string", local_string, undefined, "Hello\n");

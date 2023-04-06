@@ -112,6 +112,13 @@ const write_as = (ty: ty) => (address:number, v:number) => {
 }
 
 
+export const memcpy = (dst:number, src:number, size: number) => {
+    for (let i=0; i<size; i++) {
+        const byte = read_as(char)(src + i);
+        write_as(char)(dst+i, byte)
+    }
+}
+
 let free_chunks : [number, number][] = []
 
 // allocate n bytes
@@ -217,6 +224,17 @@ export function get_var(name:string) {
 
 export function assign_variable(var_op:operand, val_opr: operand) {
     const address = var_op.value;
+
+    // requires memcpy for bulk memory movement for strings
+    if (var_op.ty.typename === "arr" && var_op.ty.ty === char) {
+        if (!var_op.ty.n_elems) {
+            throw Error("Invalid array size")
+        }
+        memcpy(address, val_opr.value, var_op.ty.n_elems);
+        return
+    }
+
+    // normal case
     const value : number = 
         val_opr.tag === "lvalue" ? read_as(val_opr.ty)(val_opr.value) : val_opr.value
     

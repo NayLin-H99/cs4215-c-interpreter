@@ -153,13 +153,19 @@ const compile_expr_impl : Record<string, Function> = {
     },
     primaryExpression: (root:any) => {
         if (root.Constant()) {
-            return [{tag:"LDC", value: Number(get_text(root.Constant()))}]
+            const inp = get_text(root.Constant())
+            let val = Number(inp)
+            if (inp[0] === "'") {
+                if (inp.length !== 3) throw Error("Invalid character length")
+                val = inp.charCodeAt(1)
+            }
+            return [{tag:"LDC", value: val}]
         } else if (root.Identifier()) {
             return [{tag:"LDS", name: get_text(root.Identifier())}]
         } else if (root.expression()) {
             return compile_expr(root.expression())
         } else {
-            throw Error("string literals not supported");
+            return [{tag:"LDSTR", str: get_text(root).slice(1, -1)}]
         }
     },
 }

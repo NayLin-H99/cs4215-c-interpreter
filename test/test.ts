@@ -3,6 +3,9 @@ import parse_and_compile from "../src/compiler/compiler";
 import { test_repl, test_vm } from "../src/evaluator/evaluator";
 import * as fs from 'fs';
 
+console.log("=============== Running Integration/Overall Tests ===============")
+
+
 let basic_assignment = [
     ...parse_and_compile("int a = 10; int b = 3 + a * 2 + 7;"),
     {tag: "LDS", name: "b"},
@@ -631,13 +634,13 @@ test_vm("malloc_free_test", malloc_free_test, undefined, "5\n")
 let pointer_comparison = parse_and_compile(`
     int *a = malloc(24);
     int *b = a;
-    print (a == b);
+    print(a == b);
 `)
     
 test_vm("pointer_comparison", pointer_comparison, undefined, "1\n")
 
 let addr_deref_operator_behaviour = parse_and_compile(`
-    int a = &*123456789
+    int a = &*123456789;
     print (a);
 `)
 test_vm("addr_deref_operator_behaviour", addr_deref_operator_behaviour, undefined, "123456789\n")
@@ -687,3 +690,31 @@ let char_arr_2d = parse_and_compile(`
     print(s[1][1]);
 `)
 test_vm("char_arr_2d", char_arr_2d, undefined, "1\n2\n3\n4\n")
+
+let str_test1 = parse_and_compile(`
+    char *s = "hello";
+    print_str(s);
+`)
+test_vm("str_test1", str_test1, undefined, "hello\n")
+
+
+let str_test2 = parse_and_compile(`
+    char *s = "hello";
+    char *s2 = "hello";
+    print(s == s2);
+`)
+test_vm("str_test2", str_test2, undefined, "1\n")
+
+let local_str_test3 = parse_and_compile(`
+    char s[] = "hello";
+    s[0] = 'H';
+    print_str(s);
+`)
+console.log(local_str_test3)
+test_vm("local_str_test3", local_str_test3, undefined, "Hello\n")
+
+let char_test1 = parse_and_compile(`
+    char a = 'H';
+    print(a);
+`)
+test_vm("char_test1", char_test1, undefined, "72\n")
