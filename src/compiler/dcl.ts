@@ -22,7 +22,7 @@ export function compile_declaration(root: DeclarationContext | ForDeclarationCon
             instrs = [
                 ...instrs,
                 {tag:"DECL", var: { name: varname, ty: type }},
-                ...(init ? [...init, ...(type.typename === "arr" ? [] : [{tag: "ASSIGN"}])] : []),
+                ...(init ? [...init, ...((type.typename === "arr" && typedecl.type.typename !== "char") ? [] : [{tag: "ASSIGN"}])] : []),
                 {tag: "POP"},
             ]
         }
@@ -130,12 +130,15 @@ function handle_initDeclarator(root: any, type: ty): decl {
     if (root.childCount > 1) {
         let instrs = handle_initializer(root.initializer(), result.type);
 
-        
-        if (result.type.typename === "arr") {
+        // char s[] = {72,72, 72}
+        // char s1[] = "HHH";
+
+        if (result.type.typename === "arr" && type.typename != "char") {
             let base_type : ty = result.type;
             while (base_type.typename === "arr") {
                 base_type = base_type.ty
             }
+
             instrs = [{tag:"UNOP", op: "&"}, {tag: "CAST", ty: ptr(base_type)}, ...instrs]
         }
 
