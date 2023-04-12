@@ -265,7 +265,7 @@ const microcode : Record<string, Function> =  {
         // string literal used to initialize an array, an expression that has type ‘‘array of type’’ is
         // converted to an expression with type ‘‘pointer to type’’ that points to the initial element of
         // the array object and is not an lvalue. 
-        if (o.ty.typename === "arr" && op != "&") o = rvalue(o.value, ptr(o.ty.ty))
+        if (o.ty.typename === "arr" && op != "&") o = decayable(o) 
         
         const result = apply_unop[op](o)
         OS.push(result)
