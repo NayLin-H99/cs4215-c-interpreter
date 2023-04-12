@@ -22,6 +22,7 @@ const apply_binop : Record<string, Function> = {
                 throw Error("Invalid binop : adding 2 pointers")
             } 
         }
+
         return rvalue(opr_to_value(o1) + opr_to_value(o2), o1.ty);
     },
     "*" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) * opr_to_value(o2), o1.ty),
@@ -252,7 +253,14 @@ const microcode : Record<string, Function> =  {
         let o2 = decayable(pop(OS))
         let o1= decayable(pop(OS))
         const op = instr.op        
-        const result = apply_binop[op](o1, o2)
+        const result : operand = apply_binop[op](o1, o2)
+
+        // if operands are not float, then return integer results
+        const is_floating = (ty:ty) => ty.typename === "float" || ty.typename === "double"
+
+        if (!is_floating(o1.ty) && !is_floating(o2.ty)) {
+            result.value = parseInt(JSON.stringify(result.value))
+        }
         OS.push(result)
     },
 

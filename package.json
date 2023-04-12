@@ -2,7 +2,7 @@
   "scripts": {
     "build": "npm run generate && tsc",
     "test": "tsc --version && npm run generate && tsc && node out/test/test.js && node out/test/test_evaluator.js",
-    "jest": "jest test/system_test.test.ts",
+    "jest": "npm run generate && jest test/system_test.test.ts",
     "generate": "antlr4ts src/C.g4 -no-listener -no-visitor -o src/parser -Xexact-output-dir",
     "eslint": "eslint ."
   },
@@ -31,6 +31,7 @@
     "@babel/preset-env": "^7.21.4",
     "@babel/preset-typescript": "^7.21.4",
     "@jest/globals": "^29.5.0",
+    "@types/jest": "^29.5.0",
     "babel-jest": "^29.5.0",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0"
