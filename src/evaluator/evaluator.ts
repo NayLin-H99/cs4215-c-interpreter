@@ -253,9 +253,6 @@ const microcode : Record<string, Function> =  {
         let o1= decayable(pop(OS))
         const op = instr.op        
         const result = apply_binop[op](o1, o2)
-        // default to non-float operations.
-        // use o1 for typing for now. TODO: FIX THIS
-        //OS.push(rvalue(instr.isFloat ? result : parseInt(result), o1.ty))
         OS.push(result)
     },
 
