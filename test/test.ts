@@ -1,19 +1,15 @@
-import { parse } from "path";
 import parse_and_compile from "../src/compiler/compiler";
 import { test_repl, test_vm } from "../src/evaluator/evaluator";
 import * as fs from 'fs';
 
 console.log("=============== Running Integration/Overall Tests ===============")
 
-
 let basic_assignment = [
     ...parse_and_compile("int a = 10; int b = 3 + a * 2 + 7;"),
     {tag: "LDS", name: "b"},
     {tag: "DONE"}
 ]
-
-test_vm("basic_assignment", basic_assignment, 30);
-
+test_vm("basic_assignment", basic_assignment, 30)
 
 let basic_assignment_statement = [
     ...parse_and_compile("int a = 10; a = 20 + a;"),

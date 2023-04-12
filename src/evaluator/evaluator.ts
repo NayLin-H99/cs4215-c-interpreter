@@ -319,7 +319,7 @@ export function test_vm(name: string, instrs:any[], expected:number|undefined, e
             throw Error(`${name} Failed, expected ${expected_std} Got ${stdout_buf}`)
         }
         console.log(`${name} : Success`)
-        return
+        return result
     }
     throw Error(`${name} Failed, expected ${expected} Got ${result}`)
 }
