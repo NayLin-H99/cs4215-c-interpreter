@@ -712,3 +712,16 @@ let char_test1 = parse_and_compile(`
     print(a);
 `)
 test_vm("char_test1", char_test1, undefined, "72\n")
+
+let float_test = parse_and_compile(`
+    double a = 1.5;
+    double b = 3.0;
+    print (a * b);
+`)
+test_vm("float_test", float_test, undefined, "4.5\n")
+
+let pointer_minus = parse_and_compile(`
+    int a[5] = {1,2,3,4,5};
+    print (&a[4]-1 == &a[3]);
+`)
+test_vm("pointer_minus", pointer_minus, undefined, "1\n")

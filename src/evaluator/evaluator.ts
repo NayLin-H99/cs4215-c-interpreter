@@ -9,27 +9,58 @@ const is_ptr = (ty : ty) => ty.typename === "pointer"
 
 const apply_binop : Record<string, Function> = {
     // ================= ARITHMETIC =================
-    "+" : (o1:operand, o2:operand) => opr_to_value(o1) + opr_to_value(o2),
-    "*" : (o1:operand, o2:operand) => opr_to_value(o1) * opr_to_value(o2),
-    "/" : (o1:operand, o2:operand) => opr_to_value(o1) / opr_to_value(o2),
-    "-" : (o1:operand, o2:operand) => opr_to_value(o1) - opr_to_value(o2),
-    "%" : (o1:operand, o2:operand) => opr_to_value(o1) % opr_to_value(o2),
+    "+" : (o1:operand, o2:operand) => { 
+        // handle pointer
+        if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
+            if (!is_ptr(o2.ty) && o1.ty.typename === "pointer") {
+                const v = opr_to_value(o1) + opr_to_value(o2) * get_ty_size(o1.ty.type)
+                return rvalue(v, o1.ty);
+            } else if (!is_ptr(o1.ty) && o2.ty.typename === "pointer") {
+                const v = opr_to_value(o2) + opr_to_value(o1) * get_ty_size(o2.ty.type)
+                return rvalue(v, o2.ty);
+            } else {
+                throw Error("Invalid binop : adding 2 pointers")
+            } 
+        }
+        return rvalue(opr_to_value(o1) + opr_to_value(o2), o1.ty);
+    },
+    "*" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) * opr_to_value(o2), o1.ty),
+    "/" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) / opr_to_value(o2), o1.ty),
+    "-" : (o1:operand, o2:operand) => {
+        if (is_ptr(o1.ty) || is_ptr(o2.ty)) {
+            if (is_ptr(o2.ty) ) {
+                const v1 = opr_to_value(o1);
+                const v2 = opr_to_value(o2);
+                // Improvement (typesafety) : check if o1 and o2 has same type
+                // just to make typescript happy so i can access type in o1
+                if (o1.ty.typename !== "pointer") throw Error("should not happen")
+                const size = get_ty_size(o1.ty.type)
+                return rvalue(Math.floor((v1-v2)/size), int)
+            } else {
+                const size = get_ty_size(o1.ty)
+                const v = opr_to_value(o1) - opr_to_value(o2) * size
+                return rvalue(v, o1.ty);
+            }
+        }
+        return rvalue(opr_to_value(o1) - opr_to_value(o2), o1.ty)
+    },
+    "%" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) % opr_to_value(o2), o1.ty),
     // ================= BITWISE =================
-    ">>" : (o1:operand, o2:operand) => opr_to_value(o1) >> opr_to_value(o2),
-    "<<" : (o1:operand, o2:operand) => opr_to_value(o1) << opr_to_value(o2),
-    "&" : (o1:operand, o2:operand) => opr_to_value(o1) & opr_to_value(o2),
-    "|" : (o1:operand, o2:operand) => opr_to_value(o1) | opr_to_value(o2),
-    "^" : (o1:operand, o2:operand) => opr_to_value(o1) ^ opr_to_value(o2),
+    ">>" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) >> opr_to_value(o2), o1.ty),
+    "<<" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) << opr_to_value(o2), o1.ty),
+    "&" : (o1:operand, o2:operand) =>  rvalue(opr_to_value(o1) & opr_to_value(o2), o1.ty),
+    "|" : (o1:operand, o2:operand) =>  rvalue(opr_to_value(o1) | opr_to_value(o2), o1.ty),
+    "^" : (o1:operand, o2:operand) =>  rvalue(opr_to_value(o1) ^ opr_to_value(o2), o1.ty),
 
     // ================= LOGIC =================
-    "==" : (o1:operand, o2:operand) => opr_to_value(o1) == opr_to_value(o2) ? 1 : 0,
-    "!=" : (o1:operand, o2:operand) => opr_to_value(o1) != opr_to_value(o2) ? 1 : 0,
-    ">" : (o1:operand, o2:operand) => opr_to_value(o1) > opr_to_value(o2) ? 1 : 0,
-    ">=" : (o1:operand, o2:operand) => opr_to_value(o1) >= opr_to_value(o2) ? 1 : 0,
-    "<" : (o1:operand, o2:operand) => opr_to_value(o1) < opr_to_value(o2) ? 1 : 0,
-    "<=" : (o1:operand, o2:operand) => opr_to_value(o1) <= opr_to_value(o2) ? 1 : 0,
-    "&&" : (o1:operand, o2:operand) => (opr_to_value(o1) && opr_to_value(o2)) ? 1 : 0,
-    "||" : (o1:operand, o2:operand) => (opr_to_value(o1) || opr_to_value(o2)) ? 1 : 0,
+    "==" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) == opr_to_value(o2) ? 1 : 0, int),
+    "!=" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) != opr_to_value(o2) ? 1 : 0, int),
+    ">" : (o1:operand, o2:operand) =>  rvalue(opr_to_value(o1) > opr_to_value(o2) ? 1 : 0, int),
+    ">=" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) >= opr_to_value(o2) ? 1 : 0, int),
+    "<" : (o1:operand, o2:operand) =>  rvalue(opr_to_value(o1) < opr_to_value(o2) ? 1 : 0, int),
+    "<=" : (o1:operand, o2:operand) => rvalue(opr_to_value(o1) <= opr_to_value(o2) ? 1 : 0, int),
+    "&&" : (o1:operand, o2:operand) => rvalue((opr_to_value(o1) && opr_to_value(o2)) ? 1 : 0, int),
+    "||" : (o1:operand, o2:operand) => rvalue((opr_to_value(o1) || opr_to_value(o2)) ? 1 : 0, int)
 }
 
 const apply_unop : Record<string, Function> = { 
@@ -221,62 +252,11 @@ const microcode : Record<string, Function> =  {
         let o2 = decayable(pop(OS))
         let o1= decayable(pop(OS))
         const op = instr.op        
-
-        const LOGIC_OP = ["==", "!=", ">=", ">", "<=", "<", "&&", "||"]
-
-        
-        // if (o1.ty.typename === "arr") o1 = rvalue(o1.value, ptr(o1.ty.ty))
-        // if (o2.ty.typename === "arr") o2 = rvalue(o2.value, ptr(o2.ty.ty))
-
-
-        if ((is_ptr(o1.ty) || is_ptr(o2.ty)) && !LOGIC_OP.includes(op)) {
-            // POINTER ARITHMETICS
-
-            // Pointers can only add or minus
-            if (op !== "-" && op !== "+") throw Error("Invalid binop for pointers")
-
-            // If it's minus, first operand must be pointer
-            if (op === "-" && !is_ptr(o1.ty)) throw Error("Invalid type of operand 1, expected ptr")
-
-            
-            // Handle PLUS
-            if (op === "+" && !is_ptr(o2.ty) && o1.ty.typename === "pointer") {
-                const v = opr_to_value(o1) + opr_to_value(o2) * get_ty_size(o1.ty.type)
-                OS.push(rvalue(v, o1.ty))
-                return;
-            } else if (op === "+" && !is_ptr(o1.ty) && o2.ty.typename === "pointer") {
-                const v = opr_to_value(o2) + opr_to_value(o1) * get_ty_size(o2.ty.type)
-                OS.push(rvalue(v, o2.ty))
-                return;
-            } else if (op === "+") {
-                throw Error("Invalid binop : adding 2 pointers")
-            }
-
-            // Can assume first operand is a pointer
-            // If 2nd operand is a pointer, return diff
-            
-            if (op === "-" && is_ptr(o2.ty) ) {
-                const v1 = opr_to_value(o1);
-                const v2 = opr_to_value(o2);
-                // Improvement (typesafety) : check if o1 and o2 has same type
-                // just to make typescript happy so i can access type in o1
-                if (o1.ty.typename !== "pointer") throw Error("should not happen")
-                const size = get_ty_size(o1.ty.type)
-                OS.push(rvalue(Math.floor((v1-v2)/size), int))
-                return;
-            } else {
-                const size = get_ty_size(o1.ty)
-                const v = opr_to_value(o1) - opr_to_value(o2) * size
-                OS.push(rvalue(v, o1.ty))
-                return;
-            }
-        }
-
-        
         const result = apply_binop[op](o1, o2)
         // default to non-float operations.
         // use o1 for typing for now. TODO: FIX THIS
-        OS.push(rvalue(instr.isFloat ? result : parseInt(result), o1.ty))
+        //OS.push(rvalue(instr.isFloat ? result : parseInt(result), o1.ty))
+        OS.push(result)
     },
 
     UNOP: (instr:any) => {
