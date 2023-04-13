@@ -5,3 +5,5 @@ test/generated/
 test/.antlr
 src/parser/
 dist/
+coverage/
+.vscode/

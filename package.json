@@ -1,7 +1,7 @@
 {
   "scripts": {
     "build": "npm run generate && tsc --outDir dist",
-    "test": "npm run build && node dist/test/test.js && node dist/test/test_evaluator.js",
+    "test": "jest",
     "jest:system": "npm run build && jest dist/test/system.test.js",
     "jest:evaluator": "npm run build && jest dist/test/evaluator.test.js",
     "generate": "antlr4ts src/C.g4 -no-listener -no-visitor -o src/parser -Xexact-output-dir",
