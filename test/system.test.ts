@@ -1,6 +1,6 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import parse_and_compile from '../src/compiler/compiler';
-import { eval_instr, init_vm, instruction, test_repl } from '../src/evaluator/evaluator';
+import { eval_instr, init_vm, instruction } from '../src/evaluator/evaluator';
 import * as fs from 'fs';
 
 const glb = {
@@ -47,14 +47,80 @@ describe("basic statements", ()=> {
         expect(glb.printer).toHaveBeenNthCalledWith(1, "4.5")
     })
 
-    test("integer division", () => {
+    test("integer mod and division", () => {
         let code = parse_and_compile(`
-            int a = 3;
+            int a = 5;
             int b = 2;
             print (a / b);
+            print (a % b);
         `)
         test_vm(code)
-        expect(glb.printer).toHaveBeenNthCalledWith(1, "1")
+        expect(glb.printer).toHaveBeenNthCalledWith(1, "2")
+        expect(glb.printer).toHaveBeenNthCalledWith(2, "1")
+    })
+
+    test("Binary logic operations", () => {
+        let code = parse_and_compile(`
+            print(1 == 2); // 0
+            print(1 != 2); // 1
+            print(1 <= 2); // 1
+            print(1 < 2); // 1
+            print(1 > 2); // 0
+            print(1 >= 2); // 0
+            print(1 && 1); // 1
+            print(1 && 0); // 0
+            print(1 || 0); // 1
+            print(-1 || 0); // 1 cos negative is true
+        `)
+        test_vm(code)
+        let results = [0,1,1,1,0,0,1,0,1,1].map(x => JSON.stringify(x))
+        for (let i=0; i<results.length; i++) {
+            expect(glb.printer).toHaveBeenNthCalledWith(i+1, results[i])
+        }
+    })
+
+    test("Binary bitwise operations", () => {
+        let code = parse_and_compile(`
+            print (1 << 5);
+            print ((1 << 5) >> 4);
+            print (1 & 0);
+            print (1 & 1);
+            print (1 | 0);
+            print (1 | 1);
+            print (12345 ^ 54321);
+        `)
+        test_vm(code)
+        let results = [
+            1 << 5,
+            (1 << 5) >> 4,
+            1 & 0,
+            1 & 1,
+            1 | 0,
+            1 | 1,
+            12345 ^ 54321
+        ].map(x => JSON.stringify(x))
+        for (let i=0; i<results.length; i++) {
+            expect(glb.printer).toHaveBeenNthCalledWith(i+1, results[i])
+        }
+    })
+
+    test("Unary non pointer operations", () => {
+        let code = parse_and_compile(`
+            print (!123);
+            print (~123);
+            print (-123);
+            print (+123);
+        `)
+        test_vm(code)
+        let results = [
+            0,
+            -124,
+            -123,
+            123
+        ].map(x => JSON.stringify(x))
+        for (let i=0; i<results.length; i++) {
+            expect(glb.printer).toHaveBeenNthCalledWith(i+1, results[i])
+        }
     })
     
     test("basic assignment", () => {

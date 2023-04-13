@@ -69,23 +69,6 @@ export function init_memory() {
     string_free = HEAP_SIZE + STACK_SIZE
 }
 
-// correctness at byte level can only be guaranteed for 32 bits
-// due to difference in numerical representations between C and JS number
-function read_word(address : number) {
-    return HEAP_VIEW.getFloat64(address, LITTLE_ENDIAN)
-}
-
-function write_word(address:number, value:number) {
-    HEAP_VIEW.setFloat64(address, value, LITTLE_ENDIAN)
-}
-
-function read_byte(address:number) {
-    return HEAP_VIEW.getUint8(address)
-}
-
-function write_byte(address:number, value:number) {
-    HEAP_VIEW.setUint8(address, value)
-}
 
 const get_segment = (address: number) => 
     address < HEAP_SIZE ? "HEAP" :
@@ -102,6 +85,8 @@ export const read_as = (ty: ty) => (address:number) =>
     // everything else are 8 bytes
     Number(HEAP_VIEW.getBigInt64(address, LITTLE_ENDIAN))
 
+// correctness at byte level can only be guaranteed for 32 bits
+// due to difference in numerical representations between C and JS number
 const write_as = (ty: ty) => (address:number, v:number) => {  
     if (!(get_perm(address) & WRITE_PERM)) throw Error("Unwritable memory in " + get_segment(address));
     
@@ -201,10 +186,6 @@ export function declare_variable(name:string, ty:ty) : number {
     // }
 
     return dcl.address
-}
-
-export function get_var_addr(name:string) {
-    return get_var(name).address
 }
 
 export function get_var_value(name:string) {

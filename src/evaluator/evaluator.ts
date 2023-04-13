@@ -318,41 +318,6 @@ function print_os() {
     console.log(OS.map(os_val_str))
 }
 
-export function test_vm(name: string, instrs:any[], expected:number|undefined, expected_std: string | undefined = undefined) {
-    // init_vm(console.log)
-    init_vm((x: any) => {})
-    const result = eval_instr(instrs) 
-    if (result === expected) {
-        if (expected_std && stdout_buf !== expected_std) {
-            throw Error(`${name} Failed, expected ${expected_std} Got ${stdout_buf}`)
-        }
-        console.log(`${name} : Success`)
-        return result
-    }
-    throw Error(`${name} Failed, expected ${expected} Got ${result}`)
-}
-
-
-// TEST REPL Loop
-export function test_repl(name:string, instrss : any[][], expected: any[]) {
-    // init_vm(console.log)
-    init_vm((x: any) => {})
-    let results : any[] = []
-    for (let instrs of instrss) {
-        results.push(eval_instr(instrs))
-    }
-    // Assuming expected and results are the same length
-    for (let i=0; i<expected.length; i++) {
-        if (results[i] !== expected[i]) {
-            throw Error(`${name} Expected ${expected} Got ${results}`)
-        }
-    }
-
-    console.log(`${name} : Success`)
-}
-
-
-
 let running_code : instruction[] = []
 
 //  6.5.3.2

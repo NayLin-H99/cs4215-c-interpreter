@@ -56,6 +56,13 @@ describe("evaluator", () =>{
         expect(test_vm(var_blk_scope)).toBe(1)
     })
 
+    test("accessing undeclared variable should fail", () => {
+        let code = [
+            {tag:"LDS", name: "a"}
+        ]
+        expect(() => test_vm(code)).toThrow()
+    })
+
     test("var block shadowing", () => {
         /**
          * int a = 10;
@@ -240,6 +247,30 @@ describe("evaluator", () =>{
         expect(test_vm(pointer_arithmetic_3)).toBe(1)
     })
 
+    test("Adding pointers should fail", () => {
+        /**
+         * int *a = 0;
+         * int *b = 0;
+         * a + b;
+         */
+        let pointer_add = [
+            {tag: "DECL", var: { name:"a", ty: ptr(int) }},
+            {tag:"LDC", value: 8},
+            {tag:"ASSIGN"},
+            {tag:"POP"},
+            {tag: "DECL", var: { name:"b", ty: ptr(int) }},
+            {tag:"LDC", value: 8},
+            {tag:"ASSIGN"},
+            {tag:"POP"},
+            {tag: "LDS", name: "a"},
+            {tag: "LDS", name: "b"},
+            {tag:"BINOP", op: "+"},
+            {tag: "DONE"}
+        ]
+        expect(() => test_vm(pointer_add)).toThrow()
+    })
+
+    
     test("Branch conditions", () => {
         /**
          * int a = 10;
